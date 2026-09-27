@@ -2,12 +2,16 @@
 // 需求 1：使用者選擇出拳，系統隨機產生電腦出拳並顯示雙方結果
 // 需求 2：判斷本回合勝負
 // 需求 3：累計玩家的勝、平、敗次數
+// 需求 4：提供「重設」功能，清除目前比分與遊戲紀錄
 
 const CHOICES = [
   { key: "scissors", label: "✌️ 剪刀" },
   { key: "rock", label: "✊ 石頭" },
   { key: "paper", label: "✋ 布" },
 ];
+
+const INITIAL_ROUND_MESSAGE = "選一個出拳開始遊戲";
+const EMPTY_CHOICE_PLACEHOLDER = "－";
 
 // key 打敗誰：剪刀勝布、石頭勝剪刀、布勝石頭
 const BEATS = {
@@ -20,6 +24,7 @@ const playerChoiceEl = document.getElementById("player-choice");
 const computerChoiceEl = document.getElementById("computer-choice");
 const roundResultEl = document.getElementById("round-result");
 const choiceButtons = document.querySelectorAll(".choice-btn");
+const resetBtnEl = document.getElementById("reset-btn");
 
 const scoreValueEls = {
   win: document.getElementById("score-win"),
@@ -77,9 +82,24 @@ function playRound(playerKey) {
   renderScore();
 }
 
+function resetGame() {
+  score.win = 0;
+  score.draw = 0;
+  score.lose = 0;
+  renderScore();
+
+  playerChoiceEl.textContent = EMPTY_CHOICE_PLACEHOLDER;
+  computerChoiceEl.textContent = EMPTY_CHOICE_PLACEHOLDER;
+
+  roundResultEl.textContent = INITIAL_ROUND_MESSAGE;
+  roundResultEl.classList.remove("win", "lose", "draw");
+}
+
 choiceButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const playerKey = button.dataset.choice;
     playRound(playerKey);
   });
 });
+
+resetBtnEl.addEventListener("click", resetGame);

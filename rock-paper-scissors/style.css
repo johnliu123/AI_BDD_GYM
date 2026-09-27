@@ -123,3 +123,20 @@ h1 {
   font-size: 1.6rem;
   font-weight: 700;
 }
+
+.reset-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  border: 1px solid #565f78;
+  border-radius: 8px;
+  background: transparent;
+  color: #c3c8d6;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.reset-btn:hover {
+  background: #3d4459;
+  color: #f4f4f4;
+}
