@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>剪刀石頭布</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <h1>剪刀 · 石頭 · 布</h1>
+
+    <section class="choices" aria-label="選擇你的出拳">
+      <button class="choice-btn" data-choice="scissors">✌️ 剪刀</button>
+      <button class="choice-btn" data-choice="rock">✊ 石頭</button>
+      <button class="choice-btn" data-choice="paper">✋ 布</button>
+    </section>
+
+    <section class="round-display" aria-live="polite">
+      <div class="round-side">
+        <p class="round-label">你</p>
+        <p class="round-value" id="player-choice">－</p>
+      </div>
+      <div class="round-side">
+        <p class="round-label">電腦</p>
+        <p class="round-value" id="computer-choice">－</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
