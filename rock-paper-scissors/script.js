@@ -3,6 +3,7 @@
 // 需求 2：判斷本回合勝負
 // 需求 3：累計玩家的勝、平、敗次數
 // 需求 4：提供「重設」功能，清除目前比分與遊戲紀錄
+// 需求 5：保留最近 5 回合的對戰紀錄
 
 const CHOICES = [
   { key: "scissors", label: "✌️ 剪刀" },
@@ -12,6 +13,13 @@ const CHOICES = [
 
 const INITIAL_ROUND_MESSAGE = "選一個出拳開始遊戲";
 const EMPTY_CHOICE_PLACEHOLDER = "－";
+const MAX_HISTORY = 5;
+
+const RESULT_TEXT = {
+  win: "贏",
+  lose: "輸",
+  draw: "平手",
+};
 
 // key 打敗誰：剪刀勝布、石頭勝剪刀、布勝石頭
 const BEATS = {
@@ -25,6 +33,10 @@ const computerChoiceEl = document.getElementById("computer-choice");
 const roundResultEl = document.getElementById("round-result");
 const choiceButtons = document.querySelectorAll(".choice-btn");
 const resetBtnEl = document.getElementById("reset-btn");
+const historyListEl = document.getElementById("history-list");
+
+const history = [];
+let roundCounter = 0;
 
 const scoreValueEls = {
   win: document.getElementById("score-win"),
@@ -70,6 +82,48 @@ function renderScore() {
   scoreValueEls.lose.textContent = score.lose;
 }
 
+function renderHistory() {
+  historyListEl.innerHTML = "";
+
+  if (history.length === 0) {
+    const emptyItem = document.createElement("li");
+    emptyItem.className = "history-empty";
+    emptyItem.textContent = "尚無紀錄";
+    historyListEl.appendChild(emptyItem);
+    return;
+  }
+
+  // 新的回合顯示在最上面
+  history
+    .slice()
+    .reverse()
+    .forEach((entry) => {
+      const item = document.createElement("li");
+      item.className = "history-item " + entry.result;
+      item.innerHTML =
+        '<span class="history-round">#' + entry.round + "</span>" +
+        "<span>你 " + entry.playerLabel + " ・ 電腦 " + entry.computerLabel + "</span>" +
+        '<span class="history-outcome">' + RESULT_TEXT[entry.result] + "</span>";
+      historyListEl.appendChild(item);
+    });
+}
+
+function recordHistory(playerKey, computerKey, result) {
+  roundCounter += 1;
+  history.push({
+    round: roundCounter,
+    playerLabel: getLabel(playerKey),
+    computerLabel: getLabel(computerKey),
+    result: result,
+  });
+
+  if (history.length > MAX_HISTORY) {
+    history.shift();
+  }
+
+  renderHistory();
+}
+
 function playRound(playerKey) {
   const computerKey = getComputerChoice();
   const result = judgeRound(playerKey, computerKey);
@@ -80,6 +134,8 @@ function playRound(playerKey) {
 
   score[result] += 1;
   renderScore();
+
+  recordHistory(playerKey, computerKey, result);
 }
 
 function resetGame() {
@@ -93,6 +149,10 @@ function resetGame() {
 
   roundResultEl.textContent = INITIAL_ROUND_MESSAGE;
   roundResultEl.classList.remove("win", "lose", "draw");
+
+  history.length = 0;
+  roundCounter = 0;
+  renderHistory();
 }
 
 choiceButtons.forEach((button) => {
