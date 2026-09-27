@@ -79,3 +79,22 @@ h1 {
   font-size: 1.4rem;
   font-weight: 600;
 }
+
+.round-result {
+  margin: 20px 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  min-height: 1.4em;
+}
+
+.round-result.win {
+  color: #5fd68a;
+}
+
+.round-result.lose {
+  color: #ff7b7b;
+}
+
+.round-result.draw {
+  color: #f2c94c;
+}
