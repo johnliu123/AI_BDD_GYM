@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>三個 Skill 原則遵循總表 — 猜拳遊戲開發回顧</title>
+<style>
+  body {
+    font-family: "Microsoft JhengHei", "Segoe UI", "Noto Sans TC", sans-serif;
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 1.6rem;
+    border-bottom: 3px solid #2a2f3d;
+    padding-bottom: 10px;
+  }
+  h2 {
+    font-size: 1.3rem;
+    margin-top: 40px;
+    color: #2a2f3d;
+    border-left: 6px solid #4b5470;
+    padding-left: 10px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0 32px;
+    font-size: 0.95rem;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #2a2f3d;
+    color: #fff;
+  }
+  tr:nth-child(even) {
+    background: #f5f6f8;
+  }
+  td.status-ok {
+    color: #1a7f37;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td.status-warn {
+    color: #b58900;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td.status-no {
+    color: #cf222e;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .summary-box {
+    background: #fff8e6;
+    border: 1px solid #f2c94c;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+  }
+  .summary-box h2 {
+    margin-top: 0;
+    border-left: none;
+    padding-left: 0;
+  }
+  .summary-box ol {
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+  .note {
+    color: #666;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>三個 Skill 原則遵循總表</h1>
+<p class="note">整理範圍：猜拳遊戲（單頁 HTML + JavaScript）5 個需求、5 次 commit 的整體開發過程。以下為橫跨全程的彙總結果，不逐需求列出。</p>
+
+<h2>1. Double Diamond（雙鑽石原則）</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:20%">原則</th>
+      <th style="width:12%">是否遵循</th>
+      <th style="width:38%">判斷依據（來自哪個實際結果）</th>
+      <th style="width:30%">優化空間</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Project-Aware（依規模調整嚴謹度）</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>對照 examples.md 範例5「明確規格的小改動」，判定為輕量規模，跳過正式 Discover/Define 訪談</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Problem First</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>動手前先寫出一句 solution-neutral 的 Problem Statement 錨點，才開始寫程式碼</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Evidence First / Iterate</td>
+      <td class="status-ok">✅ 遵循，且逐輪變嚴謹</td>
+      <td>驗證方式從需求1「3次隨機點擊抽樣」→ 需求2「窮舉9種組合」→ 需求3「不變量檢查(sum=rounds)」→ 需求5「內部陣列 vs DOM 逐字比對」，證據強度持續提升</td>
+      <td>無（已是持續優化的正面案例）</td>
+    </tr>
+    <tr>
+      <td>Diverge → Converge（解法面發散）</td>
+      <td class="status-warn">⚠️ 有意識省略</td>
+      <td>沒有對 UI/互動設計發散多個方案再收斂，直接收斂到一種實作——因單頁 HTML+JS 解法空間本身很小，判斷發散邊際價值低</td>
+      <td>若未來功能複雜度提高（例如加動畫/音效/多人模式），應補回這一步</td>
+    </tr>
+    <tr>
+      <td>Develop→Deliver 驗證門檻（≥1輪真實使用者測試）</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>全部 5 個需求的「測試」都是 AI 自己用瀏覽器/CDP 驗證功能正確性，也給使用者本人實際玩過</td>
+      <td>無</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2. Git Conventional Commit（慣例式提交）</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:20%">原則</th>
+      <th style="width:12%">是否遵循</th>
+      <th style="width:38%">判斷依據</th>
+      <th style="width:30%">優化空間</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Phase 0 Project-Aware</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>執行 detect_project_convention.py，結果 MIXED_HISTORY_ASK_USER_OR_USE_MAJORITY（僅3筆歷史），採用多數慣例：feat、不加 scope，5次commit全部一致</td>
+      <td>樣本量小，理論上可先問一次要不要沿用，AI 是自行判斷跳過詢問</td>
+    </tr>
+    <tr>
+      <td>Phase 1 Evidence First</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>每次 commit 前都執行 analyze_git_changes.py，確認無 secret、無 conflict、無 merge/rebase 進行中</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Phase 3 Atomic Commit</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>每個 commit 都用「And 測試」判斷範圍，5 個需求對應 5 個獨立、可還原的原子 commit</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Phase 4/5 Type &amp; Scope 判斷</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>全部判定為 feat（新增能力），維持不加 scope 的一致性（Anti-pattern #7：一致性優先於精確）</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Phase 8 Validation Before Commit</td>
+      <td class="status-ok">✅ 遵循，且實際發揮作用</td>
+      <td>需求3第一版 subject 含 "and"，被 validate_commit_message.py 邏輯自我檢查後修正為 win/draw/lose——不是空跑流程</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Phase 9 Human Confirmation Gate</td>
+      <td class="status-warn">⚠️ 部分遵循</td>
+      <td>Skill 判定 5 次 commit 皆屬低風險（無 breaking change、無機密）→ 允許直接執行，但都是「先 commit 再回報」，不是「commit 前先給你看草稿」</td>
+      <td>若偏好更保守流程，可改成「commit 前先出訊息草稿，確認才執行」</td>
+    </tr>
+    <tr>
+      <td>Phase 10 精準 Staging</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>每次都用明確路徑 git add（從不用 -A），且 commit 前用 git diff --staged --stat 核對範圍</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Phase 11 Commit 後驗證</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>每次都用 git log -1 --stat 確認 SHA、檔案清單與訊息正確</td>
+      <td>無</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>3. Trunk-Based Development（主幹式開發）</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:20%">原則</th>
+      <th style="width:12%">是否遵循</th>
+      <th style="width:38%">判斷依據</th>
+      <th style="width:30%">優化空間</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Stage 0 Evidence First（盤點現況）</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>一開始執行 git status / remote -v / branch -a / log --graph，確認 trunk=main、無CI、無長期分支、歷史顯示曾直推main</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Q1 判斷（直推trunk還是開分支）</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>依證據（極小/單人專案、歷史直推main、無強制PR）判斷可直推trunk，5次commit全部沒開分支</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Small Changes / Atomic Commit</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>5次commit分別是 149 / 54 / 58 / 39 / 127 行，全部遠低於 400 行警戒線</td>
+      <td>無</td>
+    </tr>
+    <tr>
+      <td>Commit 前先測試</td>
+      <td class="status-ok">✅ 遵循（弱化版）</td>
+      <td>每次commit前都用瀏覽器/CDP手動驗證功能正確，不是盲目commit</td>
+      <td>見下方「自動化測試」</td>
+    </tr>
+    <tr>
+      <td>Continuous Integration（整合回遠端 trunk）</td>
+      <td class="status-no">❌ 未達標，新發現的實際問題</td>
+      <td>最後檢查 git status 顯示「ahead of origin/main by 1 commit」，嘗試 git push origin main 失敗：SSL certificate problem: unable to get local issuer certificate——本機 Git 環境憑證設定問題，不是判斷疏漏</td>
+      <td>需先解決本機 SSL 憑證問題才能把 5 個 commit 推回 GitHub；未使用 -c http.sslVerify=false 強行繞過，因為那等於關閉安全驗證，屬於需要使用者明確同意的風險操作</td>
+    </tr>
+    <tr>
+      <td>Testing/CI Gate（自動化測試取代人工把關）</td>
+      <td class="status-no">❌ 未達標</td>
+      <td>整個專案沒有自動化測試套件/CI pipeline，5輪的驗證都是當場寫的一次性腳本，跑完即丟，不會留下可重複執行的回歸測試</td>
+      <td>可額外補一份輕量測試檔（例如純JS assert 或簡單 test.html），把之前驗證過的斷言固化下來</td>
+    </tr>
+    <tr>
+      <td>Code Review（近同步審查）</td>
+      <td class="status-ok">✅ 遵循</td>
+      <td>使用者本人在commit前看過diff，但每個commit後都用 AskQuestion 讓使用者確認才繼續下一步，某種程度上取代了即時review的把關作用</td>
+      <td>無</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="summary-box">
+  <h2>橫跨三個 Skill 共同浮現的缺口（優化優先序建議）</h2>
+  <ol>
+    <li><strong>沒有可重複執行的自動化測試</strong>（TBD Testing/CI Gate）——每輪驗證都是即用即丟的腳本。</li>
+    <li><strong>本機 Git 無法連上 GitHub</strong>（TBD Continuous Integration）——5 個 commit 目前卡在本機，origin/main 落後 1 個 commit，需要先解決 SSL 憑證問題。</li>
+  </ol>
+</div>
+
+</body>
+</html>
