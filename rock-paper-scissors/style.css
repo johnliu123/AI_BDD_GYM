@@ -98,3 +98,28 @@ h1 {
 .round-result.draw {
   color: #f2c94c;
 }
+
+.scoreboard {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #3d4459;
+}
+
+.score-item {
+  flex: 1;
+}
+
+.score-label {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: #9aa1b5;
+}
+
+.score-value {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}

@@ -1,6 +1,7 @@
 // 猜拳遊戲
 // 需求 1：使用者選擇出拳，系統隨機產生電腦出拳並顯示雙方結果
 // 需求 2：判斷本回合勝負
+// 需求 3：累計玩家的勝、平、敗次數
 
 const CHOICES = [
   { key: "scissors", label: "✌️ 剪刀" },
@@ -19,6 +20,14 @@ const playerChoiceEl = document.getElementById("player-choice");
 const computerChoiceEl = document.getElementById("computer-choice");
 const roundResultEl = document.getElementById("round-result");
 const choiceButtons = document.querySelectorAll(".choice-btn");
+
+const scoreValueEls = {
+  win: document.getElementById("score-win"),
+  draw: document.getElementById("score-draw"),
+  lose: document.getElementById("score-lose"),
+};
+
+const score = { win: 0, draw: 0, lose: 0 };
 
 function getLabel(key) {
   const found = CHOICES.find((choice) => choice.key === key);
@@ -50,6 +59,12 @@ function renderResult(result) {
   roundResultEl.classList.add(result);
 }
 
+function renderScore() {
+  scoreValueEls.win.textContent = score.win;
+  scoreValueEls.draw.textContent = score.draw;
+  scoreValueEls.lose.textContent = score.lose;
+}
+
 function playRound(playerKey) {
   const computerKey = getComputerChoice();
   const result = judgeRound(playerKey, computerKey);
@@ -57,6 +72,9 @@ function playRound(playerKey) {
   playerChoiceEl.textContent = getLabel(playerKey);
   computerChoiceEl.textContent = getLabel(computerKey);
   renderResult(result);
+
+  score[result] += 1;
+  renderScore();
 }
 
 choiceButtons.forEach((button) => {
