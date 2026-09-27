@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>猜拳遊戲</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game">
+    <h1>✊✋✌️ 猜拳遊戲</h1>
+
+    <p class="instruction">選一個出拳：</p>
+
+    <div class="choices">
+      <button class="choice-btn" data-choice="rock" aria-label="石頭">
+        <span class="emoji">✊</span>
+        <span class="label">石頭</span>
+      </button>
+      <button class="choice-btn" data-choice="paper" aria-label="布">
+        <span class="emoji">✋</span>
+        <span class="label">布</span>
+      </button>
+      <button class="choice-btn" data-choice="scissors" aria-label="剪刀">
+        <span class="emoji">✌️</span>
+        <span class="label">剪刀</span>
+      </button>
+    </div>
+
+    <p class="result" id="result" aria-live="polite">你還沒出拳</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
