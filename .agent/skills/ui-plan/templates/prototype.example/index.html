@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>相簿整理器</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body data-page="list">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>相簿整理器</h1>
+          <p>依拍攝日期瀏覽與整理你的照片</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-import>
+          匯入照片
+          <input type="file" accept="image/*" multiple />
+        </button>
+      </header>
+
+      <section class="album-grid" id="album-grid" aria-label="相簿列表"></section>
+    </div>
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

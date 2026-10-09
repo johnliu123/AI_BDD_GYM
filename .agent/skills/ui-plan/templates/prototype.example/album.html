@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>相簿詳情 · 相簿整理器</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body data-page="album">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <a class="btn btn-ghost btn-small" href="index.html">← 所有相簿</a>
+          <h1 id="album-title">相簿</h1>
+          <p id="album-subtitle"></p>
+        </div>
+        <button type="button" class="btn btn-primary" data-import>
+          匯入到此相簿
+          <input type="file" accept="image/*" multiple />
+        </button>
+      </header>
+
+      <div class="toolbar">
+        <span class="hint"><strong>排序模式</strong>：點選兩張照片即可交換位置（雛形模擬拖放）。</span>
+        <button type="button" class="btn btn-ghost btn-small" id="demo-fail">示範失敗 toast</button>
+      </div>
+
+      <section class="photo-grid" id="photo-grid" aria-label="照片格狀"></section>
+      <div class="empty-state hidden" id="empty-state">這個相簿還沒有照片，試試匯入。</div>
+    </div>
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

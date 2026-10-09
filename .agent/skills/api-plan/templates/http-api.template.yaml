@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: "{{feature_name}} HTTP API"
+  version: "{{api_version}}"
+  description: |
+    {{api_description}}
+
+    **分析邊界**：{{analysis_boundary}}
+
+    **資源概覽**：{{resource_overview}}
+
+    **與其他端點的整合**：{{integration_notes}}
+
+    **待確認事項**：{{open_questions_or_none}}
+  contact:
+    name: API Plan
+x-contract-metadata:
+  sourceSpec: "{{relative_spec_path}}"
+  systemAnalysisPlan: "{{relative_plan_path}}"
+  uiPlan: "{{relative_ui_plan_path}}"
+  dataModel: "{{relative_data_model_path}}"
+  authModel: "{{auth_model}}"
+  originPolicy: "{{origin_policy}}"
+  contentTypes: "{{content_types}}"
+servers:
+  - url: "{{base_url}}"
+    description: "{{server_description}}"
+tags:
+  - name: "{{primary_tag_name}}"
+    description: "{{primary_tag_description}}"
+paths:
+  "/{{resource_collection_path}}":
+    get:
+      tags:
+        - "{{primary_tag_name}}"
+      operationId: "{{list_operation_id}}"
+      summary: "{{list_endpoint_summary}}"
+      description: |
+        **需求／流程追溯**：{{list_traceability}}
+
+        **資料對齊**：{{list_data_model_alignment}}
+      responses:
+        "200":
+          description: "{{list_success_description}}"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/{{list_response_schema}}"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "{{list_error_cases}}"
+  "/{{resource_item_path}}":
+    get:
+      tags:
+        - "{{primary_tag_name}}"
+      operationId: "{{get_item_operation_id}}"
+      summary: "{{get_item_summary}}"
+      description: |
+        **需求／流程追溯**：{{get_item_traceability}}
+
+        **資料對齊**：{{get_item_data_model_alignment}}
+      parameters:
+        - $ref: "#/components/parameters/{{item_id_parameter_ref}}"
+      responses:
+        "200":
+          description: "{{get_item_success_description}}"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/{{get_item_response_schema}}"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "{{get_item_error_cases}}"
+components:
+  schemas:
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+      description: "{{error_envelope_description}}"
+    "{{list_response_schema}}":
+      type: object
+      properties: {}
+      description: "{{list_response_schema_description}}"
+    "{{get_item_response_schema}}":
+      type: object
+      properties: {}
+      description: "{{get_item_response_schema_description}}"
+  responses:
+    BadRequest:
+      description: 請求無效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    InternalError:
+      description: 伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+  parameters:
+    "{{item_id_parameter_ref}}":
+      name: "{{item_id_param_name}}"
+      in: path
+      required: true
+      schema:
+        type: string
+      description: "{{item_id_param_description}}"

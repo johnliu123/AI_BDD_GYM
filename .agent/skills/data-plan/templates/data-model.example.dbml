@@ -1,0 +1,84 @@
+// Data model: 相簿整理器
+// @sourceSpec: ../specify/templates/spec.example.md
+// @plan: ../system-analysis/templates/plan.example.md
+// @analysisBoundary: MySQL 中繼資料與私有檔案儲存；不含 HTTP 或 UI。
+// @coveredEndpoints: MySQL, 私有檔案儲存 (data/)
+
+Project photo_album_organizer {
+  database_type: 'MySQL'
+  Note: '''
+相簿與照片的中繼資料存於 MySQL；原始影像與衍生預覽存於設定的私有目錄（預設 data/originals/、data/previews/）。
+匯入與重排以 transaction 保證中繼資料與檔案狀態一致；失敗時清理暫存或未提交的檔案。
+
+核心關係：一個 Album 有多張 Photo（經 album_photos）；Photo 在 Album 內以 position 排序。
+Album 以 date_key 分組（含唯一 unknown 相簿）。
+
+=== Endpoint: MySQL ===
+Invariants:
+- albums.date_key 唯一（unknown 僅一列）
+- album_photos (album_id, position) 唯一；(album_id, photo_id) 唯一
+- 同一 album_id 內 position 連續 0..n-1
+
+Transaction / failure handling:
+- 匯入：寫入暫存檔 → transaction 內建立/關聯 Photo、AlbumPhoto → 提交後移動至正式路徑；失敗 rollback 並刪除暫存。
+- 重排：transaction 內先將受影響列 position 偏移至暫存範圍（避開 MySQL 唯一索引即時衝突），再寫回 0..n-1。
+
+=== Endpoint: 私有檔案儲存 ===
+Storage layout:
+- data/originals/{photo_id}.{ext} — 原始檔，不對外靜態暴露
+- data/previews/{photo_id}.{webp|jpg} — 移除 EXIF 的縮圖
+- data/tmp/ — 匯入處理中暫存；成功後移出或失敗刪除
+
+File lifecycle:
+1. 上傳寫入 tmp/ → 驗證格式與大小 → 解析 EXIF
+2. DB 成功後移至 originals/ 並生成 previews/
+3. 刪除照片（若規格要求）時同步刪除兩類檔案與列；本範例規格未要求刪除
+
+Metadata linkage:
+- photos.original_path、photos.preview_path 為伺服器端私有路徑，非 URL
+
+=== Cross-endpoint contracts (for API Plan) ===
+- 預覽僅透過受控 API 串流；不提供檔案系統直接 URL
+- 排序以整包 album_id + 有序 photo_id[] 更新，須符合 position 不變量
+- 拍攝日期缺省時歸 unknown 相簿，不以上傳時間冒充拍攝日
+
+=== Open questions ===
+- 無（範例假設 plan 已收斂）
+  '''
+}
+
+// Entity summary:
+// | Album      | 日期分組容器     | id; date_key     | FR-001, FR-002   |
+// | Photo      | 單張照片中繼資料 | id               | FR-001, FR-010   |
+// | AlbumPhoto | 相簿內順序與歸屬 | album_id+photo_id| User Story 2     |
+
+Table albums {
+  id varchar [pk, note: 'Surrogate primary key']
+  date_key varchar [unique, not null, note: 'DATE as string or sentinel unknown; one row for unknown']
+  created_at datetime [not null]
+
+  Note: 'Album — date grouping container. Traceability: FR-001, FR-002'
+}
+
+Table photos {
+  id varchar [pk]
+  captured_at datetime [null, note: 'Nullable; missing capture date -> unknown album']
+  original_path varchar [not null, note: 'Private server path; not a public URL']
+  preview_path varchar [not null, note: 'Private preview file path']
+  imported_at datetime [not null]
+
+  Note: 'Photo metadata. Traceability: FR-001, FR-010'
+}
+
+Table album_photos {
+  album_id varchar [not null, ref: > albums.id]
+  photo_id varchar [not null, ref: > photos.id]
+  position int [not null, note: '0..n-1 within album_id']
+
+  indexes {
+    (album_id, photo_id) [pk]
+    (album_id, position) [unique]
+  }
+
+  Note: 'Membership and sort order within an album. Traceability: User Story 2'
+}

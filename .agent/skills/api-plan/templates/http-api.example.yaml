@@ -1,0 +1,354 @@
+openapi: 3.0.3
+info:
+  title: 相簿整理器 HTTP API
+  version: 0.1.0
+  description: |
+    本機 Express HTTP API；不含 UI 或 migration 實作。
+
+    **分析邊界**：本機 Express HTTP API；不含 UI 或 migration 實作。
+
+    **資源概覽**：
+    - **Album**：依 `date_key` 分組；含 `unknown`。
+    - **Photo**：中繼資料與相簿內 `position`；預覽經 API 串流，不提供原始檔下載。
+
+    **與其他端點的整合**：
+    - 檔案讀寫僅在服務層存取 `data/`；路由不暴露 `originals` 靜態目錄。
+    - 前端 Vite dev server 透過 proxy 轉發 `/api`；Origin 檢查須包含實際前端 origin。
+
+    **待確認事項**：正式 port 與 dev proxy 設定留待專案 quickstart。
+  contact:
+    name: API Plan
+x-contract-metadata:
+  sourceSpec: ../specify/templates/spec.example.md
+  systemAnalysisPlan: ../system-analysis/templates/plan.example.md
+  uiPlan: ../ui-plan/templates/ui-plan.example.md
+  dataModel: ../data-plan/templates/data-model.example.dbml
+  authModel: 第一版無使用者帳號；僅本機信任邊界。
+  originPolicy: 變更請求須驗證精確 Origin 符合前端開發／部署來源；僅 loopback 綁定不足以單獨防 CSRF。
+  contentTypes: JSON；上傳使用 multipart/form-data 單檔。
+servers:
+  - url: http://127.0.0.1:3001/api
+    description: 本機 API（port 依專案設定可調整）
+tags:
+  - name: Albums
+    description: 相簿列表與相簿內照片
+  - name: Photos
+    description: 匯入、預覽與排序
+paths:
+  /albums:
+    get:
+      tags:
+        - Albums
+      operationId: listAlbums
+      summary: 主畫面相簿列表
+      description: |
+        **需求／流程追溯**：ui-ux「瀏覽相簿」、FR-002
+
+        **資料對齊**：`albums.date_key` 唯一。
+      responses:
+        "200":
+          description: 相簿列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlbumListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "500 伺服器錯誤"
+  /albums/{albumId}/photos:
+    get:
+      tags:
+        - Albums
+      operationId: listAlbumPhotos
+      summary: 相簿詳情平鋪預覽與排序
+      description: |
+        **需求／流程追溯**：User Story 1、2
+
+        **資料對齊**：`album_photos.position` 0..n-1，回傳依 position 升序。
+      parameters:
+        - $ref: "#/components/parameters/AlbumId"
+      responses:
+        "200":
+          description: 相簿內照片列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlbumPhotosResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "404 相簿不存在"
+  /albums/{albumId}/photo-order:
+    put:
+      tags:
+        - Photos
+      operationId: updateAlbumPhotoOrder
+      summary: 持久化拖放後順序
+      description: |
+        **需求／流程追溯**：User Story 2
+
+        **資料對齊**：重排 transaction 與 position 不變量（見 data-model）。
+      parameters:
+        - $ref: "#/components/parameters/AlbumId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhotoOrderRequest"
+      responses:
+        "200":
+          description: 更新後順序
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoOrderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: 順序衝突，可重試
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "400 集合不符；409 衝突重試；500 transaction 失敗"
+  /photos/import:
+    post:
+      tags:
+        - Photos
+      operationId: importPhoto
+      summary: 單檔匯入
+      description: |
+        前端可逐檔呼叫（每請求一檔）。
+
+        **需求／流程追溯**：ui-ux「匯入照片」、plan「每請求一檔」
+
+        **資料對齊**：EXIF 決定 album_id；缺日期入 unknown；失敗清理 tmp/。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 單一影像檔
+      responses:
+        "201":
+          description: 匯入成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoImportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          description: 檔案過大
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "400 格式／大小不符；413 過大；500 寫入或 transaction 失敗"
+  /photos/{photoId}/preview:
+    get:
+      tags:
+        - Photos
+      operationId: getPhotoPreview
+      summary: 回傳移除 EXIF 的縮圖
+      description: |
+        **需求／流程追溯**：FR-007、plan 預覽策略
+
+        **資料對齊**：讀取 photos.preview_path 私有檔；preview_url 為 API 路徑，非檔案系統路徑。
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: 預覽影像
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 依部署決定
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      x-errorCases: "404 不存在或尚未生成預覽"
+components:
+  schemas:
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+      description: "共通錯誤包裝 { error: { code, message, details? } }"
+    AlbumSummary:
+      type: object
+      required:
+        - id
+        - date_key
+        - photo_count
+        - cover_preview_url
+      properties:
+        id:
+          type: string
+        date_key:
+          type: string
+          description: 日期或 unknown
+        photo_count:
+          type: integer
+          minimum: 0
+        cover_preview_url:
+          type: string
+          format: uri-reference
+          description: API 預覽路徑，非檔案系統路徑
+    AlbumListResponse:
+      type: object
+      required:
+        - albums
+      properties:
+        albums:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlbumSummary"
+    AlbumPhoto:
+      type: object
+      required:
+        - id
+        - position
+        - preview_url
+      properties:
+        id:
+          type: string
+        position:
+          type: integer
+          minimum: 0
+        preview_url:
+          type: string
+          format: uri-reference
+        captured_at:
+          type: string
+          format: date-time
+          nullable: true
+    AlbumPhotosResponse:
+      type: object
+      required:
+        - photos
+      properties:
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/AlbumPhoto"
+    PhotoOrderRequest:
+      type: object
+      required:
+        - photo_ids
+      properties:
+        photo_ids:
+          type: array
+          items:
+            type: string
+          description: 完整新順序
+    PhotoOrderItem:
+      type: object
+      required:
+        - id
+        - position
+      properties:
+        id:
+          type: string
+        position:
+          type: integer
+          minimum: 0
+    PhotoOrderResponse:
+      type: object
+      required:
+        - photos
+      properties:
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhotoOrderItem"
+    PhotoImportResponse:
+      type: object
+      required:
+        - photo
+        - album_id
+      properties:
+        photo:
+          type: object
+          required:
+            - id
+            - album_id
+            - preview_url
+          properties:
+            id:
+              type: string
+            album_id:
+              type: string
+            preview_url:
+              type: string
+              format: uri-reference
+        album_id:
+          type: string
+  responses:
+    BadRequest:
+      description: 請求無效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    InternalError:
+      description: 伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+  parameters:
+    AlbumId:
+      name: albumId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 相簿識別碼
+    PhotoId:
+      name: photoId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 照片識別碼

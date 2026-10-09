@@ -1,0 +1,53 @@
+// Data model: {{feature_name}}
+// @sourceSpec: {{relative_spec_path}}
+// @plan: {{relative_plan_path}}
+// @analysisBoundary: {{analysis_boundary}}
+// @coveredEndpoints: {{covered_data_endpoints}}
+
+Project {{project_name}} {
+  database_type: '{{database_type}}'
+  Note: '''
+{{data_overview}}
+
+{{entity_relationship_description}}
+
+=== Endpoint: {{structured_store_endpoint_name}} ===
+{{structured_store_endpoint_notes}}
+
+Transaction / failure handling:
+{{transaction_and_failure_handling}}
+
+=== Endpoint: {{file_or_object_store_endpoint_name}} ===
+Storage layout:
+{{storage_layout}}
+
+File lifecycle:
+{{file_lifecycle}}
+
+Metadata linkage:
+{{metadata_linkage}}
+
+{{additional_endpoint_sections}}
+
+=== Cross-endpoint contracts (for API Plan) ===
+{{cross_endpoint_contract_items}}
+
+=== Open questions ===
+{{open_questions_or_none}}
+  '''
+}
+
+// --- Relational / structured store ({{structured_store_endpoint_name}}) ---
+
+Table {{primary_table_name}} {
+  {{primary_table_columns}}
+
+  Note: '{{primary_table_note}}'
+  // Traceability: {{primary_table_traceability}}
+}
+
+{{additional_table_definitions}}
+
+// --- Entity summary (documentation) ---
+// | Entity | Description | Identity | Traceability |
+{{entity_summary_comment_lines}}

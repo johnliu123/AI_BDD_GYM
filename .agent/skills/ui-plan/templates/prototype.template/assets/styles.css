@@ -1,0 +1,11 @@
+/* {{feature_name}} prototype — replace tokens and expand components */
+:root {
+  --bg: {{color_bg}};
+  --surface: {{color_surface}};
+  --ink: {{color_ink}};
+  --accent: {{color_accent}};
+  --radius: {{border_radius}};
+  font-family: {{font_stack}};
+}
+
+/* {{component_styles}} */
