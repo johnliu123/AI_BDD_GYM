@@ -1,6 +1,9 @@
 ---
 name: tasks
 description: "依 spec 套件與 plan 端點產出 tasks.md：User Story 內分前端／後端，每小節必讀對照表（人讀部位+機器錨點）與任務行 ← 綁定。Use after system analysis or to break a feature into executable tasks."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # Tasks
@@ -31,7 +34,9 @@ description: "依 spec 套件與 plan 端點產出 tasks.md：User Story 內分�
 ### Phase 4 -- 產出 tasks.md
 
 1. READ `templates/tasks.template.md`、`templates/tasks.example.md`。
-2. WRITE 完整 `tasks.md`（預設與 `plan.md` 同目錄），含 Format Validation。
-3. WRITE 回報是否每 US、每小節通過 Binding 雙向覆蓋檢查。
+2. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`tasks.md`）。
+3. WRITE 完整 `tasks.md`（預設與 `plan.md` 同目錄），含 Format Validation；產物 MUST 以憲法為最高優先。
+4. EXEC **Phase Self-check**（artifact=`tasks.md`）。
+5. WRITE 回報是否每 US、每小節通過 Binding 雙向覆蓋檢查，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
 
 完成 `tasks.md` 後，實作階段由 **`/implement`** 執行（使用者須提供 feature 或 `tasks.md` 路徑）；Implement 依必讀對照與 `←` 錨點按需 READ，見 `../implement/SKILL.md`。

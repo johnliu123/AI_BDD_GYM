@@ -1,6 +1,9 @@
 ---
 name: api-plan
 description: "分析後端 API 與通訊協定端點，產出 contracts 下的 OpenAPI 3 文件（如 http-api.yaml）。通常由 /system-analysis 在取得 ui-plan 與 data-model.dbml 等前置產物後委派。Use when designing HTTP/API contracts from spec, plan, and upstream analysis artifacts."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # API Plan
@@ -27,11 +30,13 @@ description: "分析後端 API 與通訊協定端點，產出 contracts 下的 O
 
 1. THINK 依專案慣例或委派指令決定輸出路徑；預設為與 `plan.md` 同目錄下 `contracts/http-api.yaml`（OpenAPI 3.0.3；目錄不存在則建立）。
 2. READ 讀取 `templates/http-api.template.yaml` 與 `templates/http-api.example.yaml`，確認結構、追溯欄位（`info`、`x-contract-metadata`、`x-errorCases`）與 schema 粒度。
-3. WRITE 依模板撰寫有效 OpenAPI 文件；補齊 `paths` 與 `components`，移除所有 `{{}}` 佔位符與空 schema。
-4. WRITE 若檔案已存在，讀取並整合；與 data-model.dbml 衝突須釐清。
+3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`http-api.yaml`）。
+4. WRITE 依模板撰寫有效 OpenAPI 文件；補齊 `paths` 與 `components`，移除所有 `{{}}` 佔位符與空 schema；產物 MUST 以憲法為最高優先。
+5. WRITE 若檔案已存在，讀取並整合；與 data-model.dbml 衝突須釐清。
 
 ### Phase 4 -- 驗證並交付
 
 1. READ 對照規格、前置 ui-plan／data 產物與 API 文件，確認每個受派後端操作皆有契約，且流程可端到端走通（概念上）。
 2. THINK 檢查錯誤與失敗路徑與 plan 設計決策一致（如逐檔上傳失敗、transaction 失敗時客戶端可見行為）。
-3. WRITE 回報產物路徑、端點清單摘要、待確認事項與已知限制。
+3. EXEC **Phase Self-check**（artifact=`http-api.yaml`）。
+4. WRITE 回報產物路徑、端點清單摘要、待確認事項、已知限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。

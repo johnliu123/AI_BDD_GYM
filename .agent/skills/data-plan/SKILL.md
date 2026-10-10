@@ -1,6 +1,9 @@
 ---
 name: data-plan
 description: "分析資料相關端點（資料庫、檔案／物件儲存、持久化邊界），產出或更新 DBML 文件 data-model.dbml。通常由 /system-analysis 依 plan.md 的 Wave 委派；同一 Wave 多個資料端點可合併為一次委派。Use when planning data persistence from a spec or delegated endpoint analysis."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # Data Plan
@@ -27,11 +30,13 @@ description: "分析資料相關端點（資料庫、檔案／物件儲存、持
 
 1. THINK 依專案慣例或委派指令決定輸出路徑；預設與 `plan.md` 同目錄下的 `data-model.dbml`。
 2. READ 讀取 `templates/data-model.template.dbml` 與 `templates/data-model.example.dbml`，確認 `Project` 追溯註解、表結構、`Ref`／索引與非關聯端點 Note 的寫法。
-3. WRITE 依模板撰寫有效 DBML；補齊 `Table`／`indexes`／`Ref`，移除所有 `{{}}` 佔位符；檔案儲存等端點寫在 `Project Note` 或 `//` 分節。
-4. WRITE 整合既有內容時保持單一一致模型；衝突須釐清，不得靜默覆蓋。
+3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`data-model.dbml`）。
+4. WRITE 依模板撰寫有效 DBML；補齊 `Table`／`indexes`／`Ref`，移除所有 `{{}}` 佔位符；檔案儲存等端點寫在 `Project Note` 或 `//` 分節；產物 MUST 以憲法為最高優先。
+5. WRITE 整合既有內容時保持單一一致模型；衝突須釐清，不得靜默覆蓋。
 
 ### Phase 4 -- 驗證並交付
 
 1. READ 對照規格、委派邊界與 plan 設計決策，確認每個受派資料端點皆有分析，且未寫入 API 或 UI 細節。
 2. THINK 檢查實體與儲存決策可支援 plan 中的持久化與失敗處理敘述。
-3. WRITE 回報產物路徑、涵蓋端點、待確認事項，以及供 `/api-plan` 參考的關鍵持久化契約摘要。
+3. EXEC **Phase Self-check**（artifact=`data-model.dbml`）。
+4. WRITE 回報產物路徑、涵蓋端點、待確認事項、供 `/api-plan` 參考的關鍵持久化契約摘要，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。

@@ -2,7 +2,7 @@
 
 - Level: `MUST`
 - System Analysis 在 Phase 4 委派端點分析時，每項委派（或合併後的同 Wave 同 Skill 委派）必須明確提供：對應 skill id（`/ui-plan`、`/data-plan` 或 `/api-plan`）、受派端點名稱與分析邊界、本次 Wave 編號、輸出產物路徑、來源規格與 `plan.md` 路徑，以及計畫要求的前置分析產物路徑。
-- 委派指令必須要求受派 Skill 完整執行其 SOP，不得只產出摘要或跳過模板與規則。
+- 委派指令必須要求受派 Skill 完整執行其 SOP，不得只產出摘要或跳過模板與規則；對其產物須依 `.agent/constitution/references/artifact-overlay-sop.md` 執行 **Phase Load** 與 **Phase Self-check**，產物 MUST 以 `CONSTITUTION.md` 為最高優先（見 `artifact-authority.md`），交付回報須含 `Constitution self-check`。
 - 若同一 Wave 內多個端點由同一 Skill 負責且輸出至同一產物檔，必須合併為一項委派，在指令中逐端點列出分析範圍，避免平行寫入同一檔案。
 
 ## Good Example

@@ -1,6 +1,9 @@
 ---
 name: implement
 description: "依 feature 目錄 tasks.md 逐 Phase／端點小節／T 實作：必讀對照與 ← 錨點按需 READ、完成打 [x]。Use when executing tasks.md after /tasks; user must supply feature or tasks.md path."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # Implement

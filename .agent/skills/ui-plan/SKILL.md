@@ -1,6 +1,9 @@
 ---
 name: ui-plan
 description: "分析前端與 UI：產出 ui-plan.md（範疇、畫面與流程、實作、驗證）及可操作的靜態 HTML 雛形 prototype/。通常由 /system-analysis 委派。Use when planning UI/UX with reviewable HTML prototypes from a feature spec."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # UI Plan
@@ -27,17 +30,20 @@ description: "分析前端與 UI：產出 ui-plan.md（範疇、畫面與流程�
 
 1. THINK 依專案慣例或委派指令決定輸出路徑；預設與 `plan.md` 同目錄下的 `ui-plan.md`，並在同目錄建立 `prototype/`。
 2. READ 讀取 `templates/ui-plan.template.md` 與 `templates/ui-plan.example.md`。
-3. WRITE 依模板撰寫四段結構（範疇、畫面與流程、實作、驗證），列出雛形檔名對應；移除未使用區塊與所有佔位符。
+3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`ui-plan.md`）。
+4. WRITE 依模板撰寫四段結構（範疇、畫面與流程、實作、驗證），列出雛形檔名對應；移除未使用區塊與所有佔位符；產物 MUST 以憲法為最高優先。
 
 ### Phase 4 -- 產出 prototype/ HTML 雛形
 
-1. READ 讀取 `templates/prototype.example/` 的結構與互動粒度（範例為相簿整理器）；依功能調整頁面與假資料，必要時參照 `templates/prototype.template/` 骨架。
-2. WRITE 在輸出目錄 `prototype/` 建立靜態 HTML 與 `assets/`（CSS/JS）；使用假資料，不呼叫真 API；可 localStorage 模擬重新整理後仍保留的演示狀態。
-3. WRITE 確保每個主要畫面可從瀏覽器直接開啟操作，且版面為產品 UI，非 Markdown 說明轉 HTML。
-4. WRITE 整合既有雛形時保持與 `ui-plan.md` 一致；衝突須釐清。
+1. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`prototype/`）。
+2. READ 讀取 `templates/prototype.example/` 的結構與互動粒度（範例為相簿整理器）；依功能調整頁面與假資料，必要時參照 `templates/prototype.template/` 骨架。
+3. WRITE 在輸出目錄 `prototype/` 建立靜態 HTML 與 `assets/`（CSS/JS）；使用假資料，不呼叫真 API；可 localStorage 模擬重新整理後仍保留的演示狀態；產物 MUST 以憲法為最高優先。
+4. WRITE 確保每個主要畫面可從瀏覽器直接開啟操作，且版面為產品 UI，非 Markdown 說明轉 HTML。
+5. WRITE 整合既有雛形時保持與 `ui-plan.md` 一致；衝突須釐清。
 
 ### Phase 5 -- 驗證並交付
 
 1. READ 對照規格、委派邊界、`ui-plan.md` 與 `prototype/`，確認需求部位皆有文件與可見畫面覆蓋，且未寫入 API、資料模型或後端實作。
 2. THINK 依「驗證」章節走查雛形主流程與關鍵狀態；與 `plan.md` 設計決策一致。
-3. WRITE 回報 `ui-plan.md` 路徑、`prototype/` 入口 HTML、涵蓋需求部位、待確認事項，以及供 `/api-plan` 使用的前端流程摘要。
+3. EXEC **Phase Self-check**（artifact=`ui-plan.md`）；EXEC **Phase Self-check**（artifact=`prototype/`）。
+4. WRITE 回報 `ui-plan.md` 路徑、`prototype/` 入口 HTML、涵蓋需求部位、待確認事項、供 `/api-plan` 使用的前端流程摘要，以及各 artifact 的 `Constitution self-check`（格式見 artifact-overlay-sop）。

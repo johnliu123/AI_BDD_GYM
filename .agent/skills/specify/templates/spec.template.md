@@ -82,4 +82,13 @@
 ## 假設
 
 - {{assumption}}
-<!-- 依需求增列已確認的假設。 -->
+<!-- 依需求增列已確認的假設；仍待拍板的項目應標示待確認，供後續 `/clarify-over-specs` 升級。 -->
+
+## 澄清紀錄 *(可選)*
+
+<!-- 由 `/clarify-over-specs` 或手動維護；未執行規格澄清時可省略整章。 -->
+
+### Session {{clarify_session_date}}
+
+- Q: {{clarify_question}} → A: {{clarify_answer}}
+<!-- 依 session 增列 Q→A；決策亦應同步反映於正文 FR/NFR/BR、假設等章節。 -->

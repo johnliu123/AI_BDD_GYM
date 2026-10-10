@@ -1,6 +1,9 @@
 ---
 name: system-analysis
 description: "在功能規格已明確後，建立系統分析規劃，拆解需求部位、盤點技術端點、安排依賴 Wave，並委派 UI Plan、Data Plan、API Plan 執行端點分析及整合產出。Use when planning or executing system analysis from a feature specification."
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # 系統分析規劃與執行
@@ -30,8 +33,9 @@ description: "在功能規格已明確後，建立系統分析規劃，拆解需
 
 1. THINK 依專案既有規格文件慣例決定輸出位置；若無慣例，將 `plan.md` 放在本次功能規格所在目錄。若目標檔已存在，先讀取並整合，不可未檢查就覆寫。
 2. READ 讀取 `templates/plan.template.md` 與 `templates/plan.example.md`，確認文件結構、佔位符與已完成範例。
-3. WRITE 依 `templates/plan.template.md` 撰寫完整計畫，參照 `templates/plan.example.md` 的內容粒度，填入專案結構、設計決策、需求部位與端點對照，以及依賴排序的 Wave 排程。若某可選示意不適用，移除該區塊；不保留佔位符或空白章節。
-4. WRITE 在分析 Wave 排程中明確標出每項端點分析工作、負責 Skill（含可呼叫的 skill id）、輸出產物路徑、所需前置結果及其分析邊界；只有已確認可獨立開始的工作才標示為平行。列出本 skill 定義的專責 Skill；其他端點依 Phase 2 的最接近職責原則指派並說明理由。
+3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`plan.md`）。
+4. WRITE 依 `templates/plan.template.md` 撰寫完整計畫，參照 `templates/plan.example.md` 的內容粒度，填入專案結構、設計決策、需求部位與端點對照，以及依賴排序的 Wave 排程。若某可選示意不適用，移除該區塊；不保留佔位符或空白章節；產物 MUST 以憲法為最高優先。
+5. WRITE 在分析 Wave 排程中明確標出每項端點分析工作、負責 Skill（含可呼叫的 skill id）、輸出產物路徑、所需前置結果及其分析邊界；只有已確認可獨立開始的工作才標示為平行。列出本 skill 定義的專責 Skill；其他端點依 Phase 2 的最接近職責原則指派並說明理由。
 
 ### Phase 4 -- 按 Wave 委派並執行端點分析
 
@@ -44,4 +48,8 @@ description: "在功能規格已明確後，建立系統分析規劃，拆解需
 
 1. READ 對照來源規格、`plan.md`、各端點分析產物及已載入規則，確認每個需求部位與端點都有可追溯的分析結果，Wave 執行順序符合依賴，且產物沒有遺漏或未解析佔位符。
 2. THINK 檢查跨端點決策的一致性及前置輸入是否已被納入；發現矛盾時不得自行掩蓋或選擇其一，應釐清後更新受影響的分析產物並重新驗收。
-3. WRITE 回報 `plan.md` 路徑、端點至 Skill 的委派對照、Wave 執行狀態、各分析產物路徑，以及未完成工作、待確認事項或失敗原因。
+3. THINK 各端點分析產物須含受派 skill 回報的 `Constitution self-check`；缺漏視為該產物未完成。
+4. EXEC **Phase Self-check**（artifact=`plan.md`）。
+5. WRITE 回報 `plan.md` 路徑、端點至 Skill 的委派對照、Wave 執行狀態、各分析產物路徑與其 Constitution self-check、未完成工作、待確認事項或失敗原因，以及本 skill 對 `plan.md` 的 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+
+test
