@@ -1,0 +1,19 @@
+# Artifact: http-api.yaml
+
+skill: api-plan  
+overlay: true
+
+模組檔名 `http-api.yaml`；產物路徑通常為 `contracts/http-api.yaml`。
+
+## MUST
+
+- （無 repo 專屬增量時留空；以 skill template 與 `Rule-API-分析邊界與追溯.md` 為準。）
+
+## MUST NOT
+
+- 保留 `{{}}` 佔位符或空 schema 占位。
+
+## 交付自檢（Agent）
+
+- [ ] applicable shared 繁中（`description` 等人讀欄位）已滿足
+- [ ] 有效 OpenAPI 3，paths 與 components 完整

@@ -1,0 +1,17 @@
+# Artifact: data-model.dbml
+
+skill: data-plan  
+overlay: true
+
+## MUST
+
+- （無 repo 專屬增量時留空；以 skill template 與 `Rule-Data-分析邊界與追溯.md` 為準。）
+
+## MUST NOT
+
+- 保留 `{{}}` 佔位符。
+
+## 交付自檢（Agent）
+
+- [ ] applicable shared 繁中（Note／註解說明）已滿足
+- [ ] 有效 DBML，無未替換佔位符
