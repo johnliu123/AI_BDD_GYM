@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>餐點瀏覽</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">餐廳菜單</p>
+          <h1>餐點瀏覽</h1>
+        </div>
+      </header>
+
+      <main class="menu-page">
+        <section class="category-panel">
+          <h2>分類</h2>
+          <div id="categoryFilters" class="category-filters" aria-label="分類篩選"></div>
+        </section>
+
+        <section class="menu-panel">
+          <div class="menu-header">
+            <h2>今日推薦</h2>
+            <span id="resultCount" class="result-count">0 筆餐點</span>
+          </div>
+          <div id="menuGrid" class="menu-grid" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>

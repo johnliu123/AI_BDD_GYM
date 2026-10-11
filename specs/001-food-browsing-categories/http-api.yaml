@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: 餐點瀏覽與分類 HTTP API
+  version: 0.1.0
+  description: |
+    本 API 針對本迭代的餐點瀏覽與分類需求設計，僅提供讀取資料的接口。
+
+    **分析邊界**：只涵蓋顧客瀏覽餐點與分類；不包含購物車、訂單、付款或店家管理。
+
+    **資源概覽**：
+    - Categories：餐點分類列表
+    - MenuItems：餐點清單，含名稱、圖片、價格與分類
+
+    **與其他端點的整合**：
+    - 前端會讀取分類後呈現卡片式菜單
+    - 資料模型使用 `categories`、`menu_items` 關聯操作
+
+    **待確認事項**：分類排序方式、篩選方式、價格幣別格式仍待確認。
+  contact:
+    name: API Plan
+x-contract-metadata:
+  sourceSpec: ./spec.md
+  systemAnalysisPlan: ./plan.md
+  uiPlan: ./ui-plan.md
+  dataModel: ./data-model.dbml
+  authModel: 第一版不含使用者登錄，僅本機或內部環境使用。
+  originPolicy: 前端請求須驗證精確 Origin；不開放任意 CORS。
+  contentTypes: application/json
+servers:
+  - url: http://127.0.0.1:3000/api
+    description: 本機開發 API
+paths:
+  /categories:
+    get:
+      tags:
+        - Categories
+      operationId: listCategories
+      summary: 取得餐點分類列表
+      description: |
+        **需求／流程追溯**：FR-001、FR-002、UI 菜單分類區塊
+
+        **資料對齊**：對應 `categories` 表的 `id`、`name`、`sort_order`
+      responses:
+        '200':
+          description: 分類列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '500 伺服器錯誤'
+
+  /menu-items:
+    get:
+      tags:
+        - MenuItems
+      operationId: listMenuItems
+      summary: 取得餐點列表
+      description: |
+        **需求／流程追溯**：FR-001、FR-002、SC-001、SC-002
+
+        **資料對齊**：對應 `menu_items` + `categories` 關聯，回傳餐點 `name`、`price`、`image_url`、`category_name`
+      parameters:
+        - $ref: '#/components/parameters/CategoryIdFilter'
+      responses:
+        '200':
+          description: 餐點列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemListResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '500 伺服器錯誤；category_id 無效時返回 400 或空列表'
+components:
+  schemas:
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sort_order:
+          type: integer
+          nullable: true
+    CategoryListResponse:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    MenuItem:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - category_id
+        - category_name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+        price:
+          type: number
+          format: float
+          description: 以貨幣值表示，幣別格式待確認
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+    MenuItemListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+  responses:
+    BadRequest:
+      description: 請求參數無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    InternalError:
+      description: 伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+  parameters:
+    CategoryIdFilter:
+      name: category_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: 篩選特定分類的餐點

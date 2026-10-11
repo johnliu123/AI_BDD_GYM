@@ -1,0 +1,59 @@
+// Data model: 餐點瀏覽與分類
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: 關聯式資料庫；僅支援餐點瀏覽與分類的讀取，非購物車、訂單或管理後台。
+// @coveredEndpoints: categories, menu_items
+
+Project restaurant_menu {
+  database_type: 'PostgreSQL'
+  Note: '''
+餐點與分類資料以關聯式資料庫持久化，前端僅讀取資料並呈現菜單。
+本迭代不包含寫入、訂單、付款或商店管理邏輯；所有表格僅支援顧客瀏覽需求。
+
+=== Endpoint: relational menu store ===
+Invariants:
+- categories.id 唯一且不可空
+- menu_items.id 唯一且不可空
+- menu_items.category_id 必須指向存在的 categories.id
+- 同一分類下可包含多筆餐點；同一餐點只有一個主分類
+- price 必須為有效貨幣值，且顯示時不得由前端自行計算
+
+Transaction / failure handling:
+- 本迭代只保留讀取資料流，不設計寫入交易流程
+- 若 category_id 缺失或為無效值，查詢應忽略或回應錯誤，避免錯誤分類顯示
+
+=== Cross-endpoint contracts (for API Plan) ===
+- GET /categories 回傳分類列表
+- GET /menu-items 回傳餐點列表，含 category_name、price、image_url
+- 若餐點資料缺少圖片、價格或分類，後端需保留空白值以便前端顯示明確錯誤狀態
+
+=== Open questions ===
+- 本迭代未決定分類排序與篩選方式
+- 本迭代未決定價格幣別與格式
+  '''
+}
+
+Table categories {
+  id uuid [pk]
+  name varchar [not null, unique]
+  sort_order int [null]
+  created_at timestamptz [not null]
+
+  Note: '分類主資料。Traceability: FR-001, FR-002'
+}
+
+Table menu_items {
+  id uuid [pk]
+  category_id uuid [not null, ref: > categories.id]
+  name varchar [not null]
+  image_url varchar [null]
+  price decimal(10,2) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null]
+
+  Note: '餐點主資料。Traceability: FR-001, FR-002, SC-001, SC-002'
+}
+
+// Entity summary:
+// | Category | 餐點分類 | id, name | FR-001, FR-002 |
+// | MenuItem | 餐點資訊 | id, category_id, name, price, image_url | FR-001, FR-002 |
