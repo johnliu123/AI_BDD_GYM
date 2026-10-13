@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function OrderLookupPage({ lookupError, lookupBusy, lookupResult, onLookup }) {
+export default function OrderLookupPage({ lookupError, lookupBusy, lookupResult, onLookup, onRefresh }) {
   const [orderNumber, setOrderNumber] = useState('');
 
   const submit = (event) => {
@@ -37,6 +37,16 @@ export default function OrderLookupPage({ lookupError, lookupBusy, lookupResult,
               </li>
             ))}
           </ul>
+          {onRefresh && (
+            <button
+              type="button"
+              className="action-button"
+              disabled={lookupBusy}
+              onClick={() => onRefresh(lookupResult.order_number)}
+            >
+              重新查詢
+            </button>
+          )}
         </article>
       )}
     </section>

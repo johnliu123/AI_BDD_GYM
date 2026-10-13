@@ -12,6 +12,10 @@ const CLIENT_MESSAGES = {
   CART_EMPTY: '購物車沒有可送單的項目。',
   CART_HAS_UNAVAILABLE_ITEMS: '購物車含有不可用項目，請先移除後再送單。',
   ORDER_NOT_FOUND: '找不到訂單。',
+  MERCHANT_UNAUTHORIZED: '店家憑證無效。',
+  MERCHANT_NOT_CONFIGURED: '店家功能尚未設定。',
+  INVALID_STATUS_FILTER: '無效的訂單狀態篩選。',
+  ORDER_STATUS_CONFLICT: '訂單狀態已變更，請重新整理後再試。',
 };
 
 export function toClientErrorPayload(error, fallbackMessage = '請求無法完成。') {

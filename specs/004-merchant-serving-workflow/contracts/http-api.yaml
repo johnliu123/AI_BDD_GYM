@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: 店家出餐流程 HTTP API
+  version: 0.1.0
+  description: |
+    第四迭代：店家以 `X-Merchant-Token` 檢視訂單佇列、接單、更新出餐狀態並完成訂單；擴充顧客查詢訂單之 `Order.status` 列舉。
+
+    **整合**：店家路由不使用 guest session 或 CSRF。顧客 `GET /api/orders/{order_number}` 仍僅限 HttpOnly `guest_session` cookie（003 語意不變）。
+
+    **狀態機**：`created` → `accepted` → `preparing` → `completed`；非法或並發衝突回 409 `ORDER_STATUS_CONFLICT`。
+x-contract-metadata:
+  sourceSpec: ../spec.md
+  systemAnalysisPlan: ../plan.md
+  uiPlan: ../ui-plan.md
+  dataModel: ../data-model.dbml
+  priorOrderApi: ../../003-order-creation-inquiry/contracts/http-api.yaml
+  authModel: 店家 X-Merchant-Token；顧客 guest session（003）。
+  merchantTokenEnv: MERCHANT_TOKEN
+  listMaxRows: 200
+servers:
+  - url: http://localhost:3000/api
+    description: 本機 Express
+security: []
+tags:
+  - name: MerchantOrders
+    description: 店家訂單佇列與出餐狀態
+  - name: CustomerOrders
+    description: 顧客查詢（狀態列舉擴充）
+paths:
+  /merchant/orders:
+    get:
+      tags:
+        - MerchantOrders
+      operationId: listMerchantOrders
+      summary: 店家訂單列表
+      description: |
+        **需求追溯**：User Story 1；FR-001、FR-003、FR-010–FR-012；SC-001、SC-005。
+
+        回傳摘要列表；可選 `status` 篩選。依 `created_at` 降序；最多 200 筆。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+      responses:
+        '200':
+          description: 訂單摘要列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantOrderListResponse'
+        '400':
+          description: 無效 status 篩選
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              examples:
+                invalidFilter:
+                  value:
+                    error:
+                      code: INVALID_STATUS_FILTER
+                      message: 無效的訂單狀態篩選。
+          x-errorCases: INVALID_STATUS_FILTER
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}:
+    get:
+      tags:
+        - MerchantOrders
+      operationId: getMerchantOrder
+      summary: 店家訂單詳情
+      description: |
+        **需求追溯**：User Story 1；FR-002、FR-010–FR-012；SC-001、SC-006。
+
+        回傳完整快照明細與快照金額。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      responses:
+        '200':
+          description: 訂單詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}/accept:
+    post:
+      tags:
+        - MerchantOrders
+      operationId: acceptMerchantOrder
+      summary: 接單（created → accepted）
+      description: |
+        **需求追溯**：User Story 2；FR-004–FR-006、FR-013、FR-015；SC-002。
+
+        Body 可為空 `{}`；`additionalProperties: false`。忽略任何金額或明細欄位。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantOrderActionRequest'
+      responses:
+        '200':
+          description: 狀態已更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '409':
+          $ref: '#/components/responses/OrderStatusConflict'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}/start-preparing:
+    post:
+      tags:
+        - MerchantOrders
+      operationId: startPreparingMerchantOrder
+      summary: 開始出餐（accepted → preparing）
+      description: |
+        **需求追溯**：User Story 3；FR-007、FR-009、FR-013、FR-015；SC-003。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantOrderActionRequest'
+      responses:
+        '200':
+          description: 狀態已更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '409':
+          $ref: '#/components/responses/OrderStatusConflict'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}/complete:
+    post:
+      tags:
+        - MerchantOrders
+      operationId: completeMerchantOrder
+      summary: 完成訂單（preparing → completed）
+      description: |
+        **需求追溯**：User Story 3；FR-008、FR-009、FR-013、FR-015；SC-003。
+
+        「已完成」僅表示出餐流程結束，不代表已付款。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantOrderActionRequest'
+      responses:
+        '200':
+          description: 狀態已更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '409':
+          $ref: '#/components/responses/OrderStatusConflict'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /orders/{order_number}:
+    get:
+      tags:
+        - CustomerOrders
+      operationId: getOrder
+      summary: 查詢目前工作階段建立的訂單（狀態列舉擴充）
+      description: |
+        **需求追溯**：User Story 4；FR-014、FR-011；SC-004。
+
+        行為與 003 相同（session 綁定、404 語意）；`Order.status` 可為 `created|accepted|preparing|completed`，`status_label` 對應中文。
+      parameters:
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      responses:
+        '200':
+          description: 訂單明細與目前狀態
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '403':
+          description: Session 無效（沿用 003）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    OrderStatus:
+      type: string
+      enum:
+        - created
+        - accepted
+        - preparing
+        - completed
+
+    MerchantOrderActionRequest:
+      type: object
+      additionalProperties: false
+      description: 空物件；不得提交 total、items 等欄位。
+
+    MerchantOrderSummary:
+      type: object
+      required:
+        - order_number
+        - status
+        - status_label
+        - created_at
+        - total
+      properties:
+        order_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        status_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+
+    MerchantOrderListResponse:
+      type: object
+      required:
+        - orders
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/MerchantOrderSummary'
+
+    OrderResponse:
+      type: object
+      required:
+        - order
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+
+    Order:
+      type: object
+      required:
+        - order_number
+        - status
+        - status_label
+        - created_at
+        - total
+        - items
+      properties:
+        order_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        status_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderItem:
+      type: object
+      required:
+        - menu_item_id
+        - menu_item_name
+        - quantity
+        - unit_price
+        - line_total
+        - options
+      properties:
+        menu_item_id:
+          type: string
+          format: uuid
+        menu_item_name:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unit_price:
+          $ref: '#/components/schemas/MoneyAmount'
+        line_total:
+          $ref: '#/components/schemas/MoneyAmount'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemOption'
+
+    OrderItemOption:
+      type: object
+      required:
+        - option_group_id
+        - option_group_name
+        - menu_item_option_id
+        - name
+      properties:
+        option_group_id:
+          type: string
+          format: uuid
+        option_group_name:
+          type: string
+        menu_item_option_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]+)?$'
+
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: |
+                店家：`MERCHANT_UNAUTHORIZED`（401）、`MERCHANT_NOT_CONFIGURED`（503）、
+                `INVALID_STATUS_FILTER`（400）、`ORDER_STATUS_CONFLICT`（409）。
+                共用：`ORDER_NOT_FOUND`（404）。
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+  responses:
+    MerchantUnauthorized:
+      description: 缺少或無效的 X-Merchant-Token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            unauthorized:
+              value:
+                error:
+                  code: MERCHANT_UNAUTHORIZED
+                  message: 店家憑證無效。
+      x-errorCases: MERCHANT_UNAUTHORIZED
+    MerchantNotConfigured:
+      description: 伺服器未設定 MERCHANT_TOKEN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            notConfigured:
+              value:
+                error:
+                  code: MERCHANT_NOT_CONFIGURED
+                  message: 店家功能尚未設定。
+      x-errorCases: MERCHANT_NOT_CONFIGURED
+    OrderNotFound:
+      description: 查無訂單
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            notFound:
+              value:
+                error:
+                  code: ORDER_NOT_FOUND
+                  message: 找不到訂單。
+      x-errorCases: ORDER_NOT_FOUND
+    OrderStatusConflict:
+      description: 目前狀態不允許此操作或並發衝突
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            conflict:
+              value:
+                error:
+                  code: ORDER_STATUS_CONFLICT
+                  message: 訂單狀態已變更，請重新整理後再試。
+      x-errorCases: ORDER_STATUS_CONFLICT
+    InternalError:
+      description: 未預期錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'

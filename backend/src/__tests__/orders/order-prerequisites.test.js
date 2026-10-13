@@ -6,6 +6,12 @@ import { buildCartState } from '../../services/cartPricing.js';
 import { formatMoney, addMoneyStrings } from '../../services/money.js';
 import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import { createSessionRecord } from '../../repositories/guestSessionRepository.js';
+import {
+  insertOrderHeader,
+  insertOrderItemRow,
+  loadOrderByOrderNumber,
+} from '../../repositories/orderRepository.js';
+import { getPool } from '../../config/db.js';
 
 test.before(async () => {
   await setupTestDatabase();
@@ -28,4 +34,30 @@ test('money.js produces decimal strings for API snapshots', () => {
   assert.equal(formatMoney('120.5'), '120.50');
   assert.equal(addMoneyStrings('0.10', '0.20'), '0.30');
   assert.match(formatMoney(99), /^-?[0-9]+\.[0-9]{2}$/);
+});
+
+test('orderRepository loads order header and line snapshots by order number', async () => {
+  const session = await createSessionRecord();
+  const pool = getPool();
+  const orderNumber = 'ORD-20261014-AABB0001';
+  const orderId = await insertOrderHeader(session.id, orderNumber, '220.00', pool);
+  await insertOrderItemRow(
+    orderId,
+    {
+      menu_item_id: 'item-1',
+      menu_item_name: '測試餐點',
+      quantity: 1,
+      unit_price: '220.00',
+      line_total: '220.00',
+      options: [],
+    },
+    pool
+  );
+
+  const order = await loadOrderByOrderNumber(orderNumber, pool);
+  assert.equal(order.order_number, orderNumber);
+  assert.equal(order.status, 'created');
+  assert.equal(order.status_label, '已建立');
+  assert.equal(order.total, '220.00');
+  assert.equal(order.items.length, 1);
 });

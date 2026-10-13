@@ -1,0 +1,81 @@
+// 資料模型：點餐系統第四迭代－店家管理與出餐流程
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: 擴充第三迭代 orders 狀態欄位；不含 HTTP、UI、migrations。
+// @coveredEndpoints: Microsoft SQL Server
+
+Project merchant_serving_workflow {
+  database_type: 'Microsoft SQL Server'
+  Note: '''
+本模型擴充 003 訂單標頭之狀態生命週期。明細與 total_amount 仍為建立快照，狀態轉換不得 UPDATE order_items 或 total_amount（BR-001、FR-012）。
+
+狀態機（僅允許前進）：
+  created → accepted → preparing → completed
+
+應用層每次轉換須：
+  UPDATE orders SET status = @next, status_updated_at = SYSUTCDATETIME()
+  WHERE order_number = @n AND status = @expected
+若 @@ROWCOUNT = 0 → 409 ORDER_STATUS_CONFLICT（非法轉換或並發）。
+
+店家列表：SELECT 摘要欄位，可選 WHERE status = @filter，ORDER BY created_at DESC（上限由 API 層限制）。
+
+顧客查詢與店家詳情讀同一 orders.status（FR-011）。
+
+=== 供 API Plan ===
+- Merchant：GET list/detail；POST accept / start-preparing / complete（空 body）。
+- Customer GET order：回傳擴充後 status 列舉與 status_label。
+
+=== 003 沿用 ===
+order_items、order_item_options、order_idempotency_keys 結構不變。
+  '''
+}
+
+Table guest_sessions {
+  session_id varchar [pk]
+  Note: '003 邏輯投影；FR-010 顧客端'
+}
+
+Table orders {
+  id uuid [pk]
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  order_number varchar(32) [not null, unique]
+  status varchar(32) [not null, note: 'created|accepted|preparing|completed']
+  total_amount numeric(10, 2) [not null, note: '建立快照；狀態轉換不可 UPDATE']
+  created_at datetime2 [not null]
+  status_updated_at datetime2 [note: '最近一次成功狀態轉換；created 時可等於 created_at']
+
+  indexes {
+    (status, created_at)
+    (guest_session_id, created_at)
+  }
+
+  Note: '004 擴充 status 與 status_updated_at。需求追溯 FR-001–FR-015、FR-011、BR-001–BR-003、SC-001–SC-006'
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  menu_item_id uuid [not null]
+  menu_item_name nvarchar(200) [not null]
+  quantity int [not null]
+  unit_price numeric(10, 2) [not null]
+  line_total numeric(10, 2) [not null]
+
+  Note: '004 唯讀；需求追溯 FR-012、SC-006'
+}
+
+Table order_item_options {
+  order_item_id uuid [not null, ref: > order_items.id]
+  option_group_id uuid [not null]
+  option_group_name nvarchar(100) [not null]
+  menu_item_option_id uuid [not null]
+  option_name nvarchar(100) [not null]
+
+  indexes {
+    (order_item_id, option_group_id) [pk]
+  }
+
+  Note: '004 唯讀'
+}
+
+// Constitution self-check: pass

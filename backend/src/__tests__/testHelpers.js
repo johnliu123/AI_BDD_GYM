@@ -46,3 +46,32 @@ export function postCreateOrder(app, session, { body = {}, idempotencyKey } = {}
   }
   return request(app).post('/api/orders').set(headers).send(body);
 }
+
+export const MERCHANT_TEST_TOKEN = 'test-merchant-token';
+
+export function merchantHeaders(token = MERCHANT_TEST_TOKEN) {
+  return { 'X-Merchant-Token': token };
+}
+
+export async function createSampleOrder(app, session) {
+  await addSampleCartItem(app, session);
+  return postCreateOrder(app, session, { body: {} });
+}
+
+export function getOrderForSession(app, session, orderNumber) {
+  return request(app)
+    .get(`/api/orders/${encodeURIComponent(orderNumber)}`)
+    .set(session.headers);
+}
+
+export function merchantGet(app, path, { token = MERCHANT_TEST_TOKEN, query } = {}) {
+  let req = request(app).get(path).set(merchantHeaders(token));
+  if (query) {
+    req = req.query(query);
+  }
+  return req;
+}
+
+export function merchantPost(app, path, { token = MERCHANT_TEST_TOKEN, body = {} } = {}) {
+  return request(app).post(path).set(merchantHeaders(token)).send(body);
+}

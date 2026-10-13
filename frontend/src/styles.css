@@ -395,6 +395,72 @@ button {
   cursor: pointer;
 }
 
+.merchant-board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.merchant-board__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 2fr);
+  gap: 20px;
+}
+
+.merchant-board__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.merchant-board__list button {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.merchant-board__list button.selected {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.merchant-board__detail {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+
+.merchant-board__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.merchant-board__toast {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border-radius: 6px;
+}
+
+.merchant-board__empty {
+  color: #6b7280;
+  padding: 8px 0;
+}
+
 @media (max-width: 640px) {
   .menu-page {
     padding: 24px 16px 36px;

@@ -386,7 +386,7 @@ function executeQuery(state, text, params = []) {
 
   if (
     sql
-    === 'INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at) VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME())'
+    === 'INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at) VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME(), SYSUTCDATETIME())'
   ) {
     const duplicate = [...state.orders.values()].some((entry) => entry.order_number === params[2]);
     if (duplicate) {
@@ -402,8 +402,55 @@ function executeQuery(state, text, params = []) {
       status: params[3],
       total_amount: params[4],
       created_at: ts,
+      status_updated_at: ts,
     });
     return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'UPDATE orders SET status = $3, status_updated_at = SYSUTCDATETIME() WHERE order_number = $1 AND status = $2'
+  ) {
+    const row = [...state.orders.values()].find((entry) => entry.order_number === params[0]);
+    if (!row || row.status !== params[1]) {
+      return { rows: [], rowCount: 0 };
+    }
+    row.status = params[2];
+    row.status_updated_at = nowIso();
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'SELECT order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE status = $1 ORDER BY created_at DESC'
+  ) {
+    const rows = [...state.orders.values()]
+      .filter((entry) => entry.status === params[0])
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((entry) => ({
+        order_number: entry.order_number,
+        status: entry.status,
+        total_amount: entry.total_amount,
+        created_at: entry.created_at,
+        status_updated_at: entry.status_updated_at ?? entry.created_at,
+      }));
+    return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql
+    === 'SELECT order_number, status, total_amount, created_at, status_updated_at FROM orders ORDER BY created_at DESC'
+  ) {
+    const rows = [...state.orders.values()]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((entry) => ({
+        order_number: entry.order_number,
+        status: entry.status,
+        total_amount: entry.total_amount,
+        created_at: entry.created_at,
+        status_updated_at: entry.status_updated_at ?? entry.created_at,
+      }));
+    return { rows, rowCount: rows.length };
   }
 
   if (
@@ -473,14 +520,25 @@ function executeQuery(state, text, params = []) {
     return { rows: [], rowCount: removed };
   }
 
-  if (sql === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at FROM orders WHERE id = $1') {
+  if (
+    sql
+    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE id = $1'
+  ) {
     const row = state.orders.get(params[0]);
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
   }
 
   if (
     sql
-    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at FROM orders WHERE order_number = $1 AND guest_session_id = $2'
+    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE order_number = $1'
+  ) {
+    const row = [...state.orders.values()].find((entry) => entry.order_number === params[0]);
+    return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
+  }
+
+  if (
+    sql
+    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE order_number = $1 AND guest_session_id = $2'
   ) {
     const row = [...state.orders.values()].find(
       (entry) => entry.order_number === params[0] && entry.guest_session_id === params[1]

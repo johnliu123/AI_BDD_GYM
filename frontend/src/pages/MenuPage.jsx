@@ -5,6 +5,8 @@ import { buildAddToCartPayload, loadMenuData } from '../menuApi.js';
 import MealOptionsDialog from '../components/MealOptionsDialog.jsx';
 import CartPage from './CartPage.jsx';
 import OrderLookupPage from './OrderLookupPage.jsx';
+import MerchantOrdersPage from './MerchantOrdersPage.jsx';
+import { resolveMerchantToken } from '../merchantOrderApi.js';
 
 const emptyState = {
   hasData: false,
@@ -19,7 +21,17 @@ export default function MenuPage() {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [brokenImages, setBrokenImages] = useState({});
-  const [activeView, setActiveView] = useState('menu');
+  const merchantToken = resolveMerchantToken();
+
+  const resolveViewFromHash = () => {
+    const hash = globalThis.location?.hash || '';
+    if (hash.startsWith('#/merchant')) {
+      return 'merchant';
+    }
+    return 'menu';
+  };
+
+  const [activeView, setActiveView] = useState(resolveViewFromHash);
   const [cart, setCart] = useState({ items: [], total: '0.00' });
   const [cartError, setCartError] = useState('');
   const [cartBusy, setCartBusy] = useState(false);
@@ -39,6 +51,26 @@ export default function MenuPage() {
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const syncHash = () => {
+      setActiveView(resolveViewFromHash());
+    };
+    globalThis.addEventListener('hashchange', syncHash);
+    return () => globalThis.removeEventListener('hashchange', syncHash);
+  }, []);
+
+  const navigateTo = (view) => {
+    if (view === 'merchant') {
+      globalThis.location.hash = '#/merchant';
+      setActiveView('merchant');
+      return;
+    }
+    if (globalThis.location.hash.startsWith('#/merchant')) {
+      globalThis.location.hash = '';
+    }
+    setActiveView(view);
+  };
 
   useEffect(() => {
     cartApi.getCart().then((response) => {
@@ -143,7 +175,7 @@ export default function MenuPage() {
       }
       runCartAction(() => cartApi.addItem(result.payload)).then((added) => {
         if (added) {
-          setActiveView('cart');
+          navigateTo('cart');
         }
       });
       setSelectedItem(null);
@@ -154,7 +186,7 @@ export default function MenuPage() {
     runCartAction(() => cartApi.addItem(payload)).then((added) => {
       if (added) {
         setSelectedItem(null);
-        setActiveView('cart');
+        navigateTo('cart');
       }
     });
   };
@@ -179,7 +211,7 @@ export default function MenuPage() {
       const cartResponse = await orderApi.cartApi.getCart();
       if (mountedRef.current) {
         setCart(cartResponse.cart);
-        setActiveView('order');
+        navigateTo('order');
       }
     } catch (error) {
       if (mountedRef.current) {
@@ -223,19 +255,24 @@ export default function MenuPage() {
       <header className="menu-page__header">
         <h1>餐點瀏覽</h1>
         <nav className="view-switch" aria-label="主要檢視">
-          <button type="button" className={activeView === 'menu' ? 'selected' : ''} onClick={() => setActiveView('menu')}>
+          <button type="button" className={activeView === 'menu' ? 'selected' : ''} onClick={() => navigateTo('menu')}>
             菜單
           </button>
-          <button type="button" className={activeView === 'cart' ? 'selected' : ''} onClick={() => setActiveView('cart')}>
+          <button type="button" className={activeView === 'cart' ? 'selected' : ''} onClick={() => navigateTo('cart')}>
             購物車 <span className="cart-count">{cart.items.length}</span>
           </button>
-          <button type="button" className={activeView === 'lookup' ? 'selected' : ''} onClick={() => setActiveView('lookup')}>
+          <button type="button" className={activeView === 'lookup' ? 'selected' : ''} onClick={() => navigateTo('lookup')}>
             查詢訂單
+          </button>
+          <button type="button" className={activeView === 'merchant' ? 'selected' : ''} onClick={() => navigateTo('merchant')}>
+            店家看板
           </button>
         </nav>
       </header>
 
-      {activeView === 'menu' ? (
+      {activeView === 'merchant' ? (
+        <MerchantOrdersPage merchantToken={merchantToken} />
+      ) : activeView === 'menu' ? (
         <>
           <section className="menu-page__filters" aria-label="分類篩選">
             <button
@@ -336,7 +373,7 @@ export default function MenuPage() {
               </li>
             ))}
           </ul>
-          <button type="button" className="action-button" onClick={() => setActiveView('lookup')}>
+          <button type="button" className="action-button" onClick={() => navigateTo('lookup')}>
             查詢此訂單
           </button>
         </section>
@@ -346,6 +383,7 @@ export default function MenuPage() {
           lookupError={lookupError}
           lookupResult={lookupResult}
           onLookup={lookupOrder}
+          onRefresh={lookupOrder}
         />
       )}
 

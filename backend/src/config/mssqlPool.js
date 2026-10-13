@@ -1,3 +1,4 @@
+import '../polyfills/nodePromiseWithResolvers.js';
 import { getMssqlConfig } from './mssqlConfig.js';
 
 function toMssqlText(text) {

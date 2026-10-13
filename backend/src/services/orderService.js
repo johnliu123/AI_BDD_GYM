@@ -12,7 +12,6 @@ import {
   runOrderCreationTransaction,
 } from '../repositories/orderRepository.js';
 
-const STATUS_LABEL = '已建立';
 const MAX_ORDER_NUMBER_ATTEMPTS = 5;
 
 /** Serializes create-order work per session to avoid duplicate orders without Idempotency-Key (single-process). */
@@ -178,5 +177,3 @@ export async function getOrderForSession(sessionId, orderNumber) {
 export function resetSessionCreateMutexForTests() {
   sessionCreateChains.clear();
 }
-
-export { STATUS_LABEL };

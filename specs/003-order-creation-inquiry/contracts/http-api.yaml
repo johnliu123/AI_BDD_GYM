@@ -3,7 +3,7 @@ info:
   title: 訂單建立與查詢 HTTP API
   version: 0.1.0
   description: |
-    在第二迭代購物車之上，提供匿名訪客由目前工作階段購物車建立訂單及查詢訂單的 REST JSON 契約；不含付款、取消或店家管理。
+    在第二迭代購物車之上，提供匿名訪客由目前工作階段購物車建立訂單及查詢訂單的 REST JSON 契約；不含付款、取消。店家出餐 API 見 `specs/004-merchant-serving-workflow/contracts/http-api.yaml`。
 
     **整合**：訂單建立須先 `GET /api/cart` 取得 `csrf_token`；`POST /api/orders` 須帶 `X-CSRF-Token` 與精確 `Origin`（同 002 cart 寫入政策）。Session 僅能透過 HttpOnly `guest_session` cookie。
 
@@ -121,7 +121,7 @@ paths:
       description: |
         **需求追溯**：User Story 2；FR-008、FR-009、FR-010、FR-011；SC-005。
 
-        以 path `order_number` 與 cookie 解析之 guest_session_id 同時匹配；否則 404 ORDER_NOT_FOUND（不洩漏他 session 訂單是否存在）。回傳持久化快照金額，不以最新菜單重算。
+        以 path `order_number` 與 cookie 解析之 guest_session_id 同時匹配；否則 404 ORDER_NOT_FOUND（不洩漏他 session 訂單是否存在）。回傳持久化快照金額，不以最新菜單重算。`Order.status` 自第四迭代起可為 `created|accepted|preparing|completed`（與 004 對齊）。
       parameters:
         - in: path
           name: order_number
@@ -162,6 +162,14 @@ paths:
 
 components:
   schemas:
+    OrderStatus:
+      type: string
+      enum:
+        - created
+        - accepted
+        - preparing
+        - completed
+
     CreateOrderRequest:
       type: object
       additionalProperties: false
@@ -188,16 +196,18 @@ components:
         order_number:
           type: string
         status:
-          type: string
-          enum:
-            - created
+          $ref: '#/components/schemas/OrderStatus'
         status_label:
           type: string
-          description: 本迭代固定「已建立」
+          description: 對應 status 之中文標籤（已建立／已接單／出餐中／已完成）
           example: 已建立
         created_at:
           type: string
           format: date-time
+        status_updated_at:
+          type: string
+          format: date-time
+          nullable: true
         total:
           $ref: '#/components/schemas/MoneyAmount'
         items:

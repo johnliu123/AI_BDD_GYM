@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
 import { getPool } from '../config/db.js';
+import { statusLabelFor } from '../lib/orderStatus.js';
 import { withTransaction } from './cartRepository.js';
+
+const ORDER_HEADER_SELECT =
+  'id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at';
 
 export async function findIdempotencyOrderId(sessionId, idempotencyKey, client = getPool()) {
   const result = await client.query(
@@ -25,8 +29,8 @@ export async function insertIdempotencyKey(sessionId, idempotencyKey, orderId, e
 export async function insertOrderHeader(sessionId, orderNumber, totalAmount, client) {
   const orderId = crypto.randomUUID();
   await client.query(
-    `INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at)
-     VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME())`,
+    `INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at)
+     VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME(), SYSUTCDATETIME())`,
     [orderId, sessionId, orderNumber, 'created', totalAmount]
   );
   return orderId;
@@ -83,9 +87,22 @@ export async function clearCartItemsForSession(sessionId, client) {
   );
 }
 
+export async function loadOrderByOrderNumber(orderNumber, client = getPool()) {
+  const header = await client.query(
+    `SELECT ${ORDER_HEADER_SELECT}
+     FROM orders
+     WHERE order_number = $1`,
+    [orderNumber]
+  );
+  if (!header.rows[0]) {
+    return null;
+  }
+  return assembleOrder(header.rows[0], client);
+}
+
 export async function loadOrderById(orderId, client = getPool()) {
   const header = await client.query(
-    `SELECT id, guest_session_id, order_number, status, total_amount, created_at
+    `SELECT ${ORDER_HEADER_SELECT}
      FROM orders
      WHERE id = $1`,
     [orderId]
@@ -99,7 +116,7 @@ export async function loadOrderById(orderId, client = getPool()) {
 
 export async function loadOrderByNumberAndSession(sessionId, orderNumber, client = getPool()) {
   const header = await client.query(
-    `SELECT id, guest_session_id, order_number, status, total_amount, created_at
+    `SELECT ${ORDER_HEADER_SELECT}
      FROM orders
      WHERE order_number = $1 AND guest_session_id = $2`,
     [orderNumber, sessionId]
@@ -154,11 +171,56 @@ async function assembleOrder(headerRow, client) {
   return {
     order_number: headerRow.order_number,
     status: headerRow.status,
-    status_label: '已建立',
+    status_label: statusLabelFor(headerRow.status),
     created_at: normalizeTimestamp(headerRow.created_at),
+    status_updated_at: headerRow.status_updated_at
+      ? normalizeTimestamp(headerRow.status_updated_at)
+      : normalizeTimestamp(headerRow.created_at),
     total: formatDecimal(headerRow.total_amount),
     items,
   };
+}
+
+export async function listOrdersForMerchant({ status = null, limit = 200 }, client = getPool()) {
+  const result = status
+    ? await client.query(
+        `SELECT order_number, status, total_amount, created_at, status_updated_at
+         FROM orders
+         WHERE status = $1
+         ORDER BY created_at DESC`,
+        [status]
+      )
+    : await client.query(
+        `SELECT order_number, status, total_amount, created_at, status_updated_at
+         FROM orders
+         ORDER BY created_at DESC`,
+        []
+      );
+
+  const rows = result.rows.slice(0, limit);
+  return rows.map((row) => ({
+    order_number: row.order_number,
+    status: row.status,
+    status_label: statusLabelFor(row.status),
+    created_at: normalizeTimestamp(row.created_at),
+    status_updated_at: row.status_updated_at
+      ? normalizeTimestamp(row.status_updated_at)
+      : normalizeTimestamp(row.created_at),
+    total: formatDecimal(row.total_amount),
+  }));
+}
+
+export async function transitionOrderStatus(orderNumber, expectedStatus, nextStatus, client = getPool()) {
+  const result = await client.query(
+    `UPDATE orders
+     SET status = $3, status_updated_at = SYSUTCDATETIME()
+     WHERE order_number = $1 AND status = $2`,
+    [orderNumber, expectedStatus, nextStatus]
+  );
+  if ((result.rowCount ?? 0) < 1) {
+    return null;
+  }
+  return loadOrderByOrderNumber(orderNumber, client);
 }
 
 function formatDecimal(value) {
