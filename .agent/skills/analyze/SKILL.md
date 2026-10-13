@@ -8,6 +8,8 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 # Analyze（規格套件健檢）
 
+主流程位置：`/tasks` 之後、`/implement` 之前（見 `../../references/sdd-primary-workflow.md`）。
+
 在實作前（`/implement`）對功能規格套件做 **唯讀** 交叉分析：找出重複、歧義、欠規格、憲法衝突、需求覆蓋缺口與跨文件不一致。本 skill **不得** 寫入或修改任何產物；修復須由使用者明確同意後，另行 invoke `/specify`、`/system-analysis`、`/tasks`、`/clarify` 等。
 
 ## SOP

@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "依 feature 目錄 tasks.md 逐 Phase／端點小節／T 實作：必讀對照與 ← 錨點按需 READ、完成打 [x]。Use when executing tasks.md after /tasks; user must supply feature or tasks.md path."
+description: "依 feature 目錄 tasks.md 逐 Phase／端點小節／T 實作：必讀對照與 ← 錨點按需 READ、完成打 [x]。主流程預設在 /analyze 之後執行；user must supply feature or tasks.md path."
 license: MIT
 license-file: LICENSE.txt
 attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
@@ -18,7 +18,8 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 1. READ 使用者輸入；**必須**取得 `tasks.md` 路徑或含 `tasks.md` 的 **feature 目錄**。未提供則 STOP，請使用者提供，**不得**自動偵測 `specs/*/`
 2. THINK 令 `FEATURE_DIR` = `tasks.md` 所在目錄；確認同目錄存在 `plan.md`；若缺 `tasks.md` 則建議先 `/tasks`
-3. READ 讀 `FEATURE_DIR/tasks.md` 全文（任務清單本身可一次讀；**spec 套件仍按需讀**）
+3. THINK 主流程為 `/tasks` → **`/analyze`** → `/implement`（見 `../../references/sdd-primary-workflow.md`）。若使用者未明示已 analyze、未附 analyze 結論（含 CRITICAL 數）、且未要求 skip analyze，**WARN** 建議先對 `FEATURE_DIR` 執行 **`/analyze`**；使用者回覆 proceed／skip analyze／continue 則進入步驟 4；若對話中已存在同 feature 的 analyze 報告且含 CRITICAL，**STOP** 並建議先修復產物再 implement
+4. READ 讀 `FEATURE_DIR/tasks.md` 全文（任務清單本身可一次讀；**spec 套件仍按需讀**）
 
 ### Phase 2 -- Checklist 閘門（有則啟用）
 

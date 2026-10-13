@@ -22,5 +22,15 @@
 | api-plan | http-api.yaml |
 | tasks | tasks.md |
 
-Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（見 overlay-sop）。  
-`/implement` 不在 registry 內。
+Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（見 overlay-sop）。
+
+## 主流程（非 registry 步驟）
+
+預設順序見 `../../references/sdd-primary-workflow.md`：
+
+`/specify` → `/technical-research` → `/system-analysis` → `/tasks` → **`/analyze`** → `/implement`
+
+| 步驟 | 寫入憲法產物 | 備註 |
+| --- | --- | --- |
+| `/analyze` | 否 | 唯讀健檢；報告僅對話輸出 |
+| `/implement` | 否（改程式與 tasks 勾選） | 不在 registry 內 |

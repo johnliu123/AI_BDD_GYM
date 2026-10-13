@@ -38,5 +38,6 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 3. WRITE 完整 `tasks.md`（預設與 `plan.md` 同目錄），含 Format Validation；產物 MUST 以憲法為最高優先。
 4. EXEC **Phase Self-check**（artifact=`tasks.md`）。
 5. WRITE 回報是否每 US、每小節通過 Binding 雙向覆蓋檢查，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+6. WRITE 建議下一指令：預設 **`/analyze`**（主流程見 `../../references/sdd-primary-workflow.md`）；實作由 **`/implement`** 執行，且應在 analyze 無 CRITICAL 或使用者確認 proceed 之後。
 
-完成 `tasks.md` 後，實作階段由 **`/implement`** 執行（使用者須提供 feature 或 `tasks.md` 路徑）；Implement 依必讀對照與 `←` 錨點按需 READ，見 `../implement/SKILL.md`。
+完成 `tasks.md` 後，依主流程先 **`/analyze`** 對規格套件做唯讀健檢，再 **`/implement`**（使用者須提供 feature 或 `tasks.md` 路徑）；Implement 依必讀對照與 `←` 錨點按需 READ，見 `../implement/SKILL.md` 與 `../analyze/SKILL.md`。

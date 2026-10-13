@@ -39,3 +39,4 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 2. THINK 檢查兩份 Markdown 結構完整、來源規格與研究決策連結均指向正確目標、沒有未替換佔位符或空白項目，且架構摘要、詳細理由與部署限制彼此一致；修正發現的問題後重新檢查。
 3. EXEC **Phase Self-check**（artifact=`research.md`）；EXEC **Phase Self-check**（artifact=`techstack.md`）。
 4. WRITE 回報兩份產物的路徑、主要技術決策、尚未固定的選項、無法查核的限制，以及各 artifact 的 `Constitution self-check`（格式見 artifact-overlay-sop）。
+5. WRITE 建議下一指令：預設 **`/system-analysis`**（主流程見 `../../references/sdd-primary-workflow.md`）。

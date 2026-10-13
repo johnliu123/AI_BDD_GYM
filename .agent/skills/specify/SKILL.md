@@ -33,3 +33,4 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 3. EXEC **Phase Self-check**（artifact=`spec.md`）；未全過則修正後重驗。
 4. WRITE 修正檢查發現的錯誤與遺漏，重新執行驗證，直到結構檢查通過且語意檢查完成。
 5. WRITE 回報規格路徑、主要故事與全域需求、尚待確認的假設或限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+6. WRITE 建議下一指令：預設 **`/technical-research`**（主流程見 `../../references/sdd-primary-workflow.md`）；若使用者要求 spec 第二 pass 澄清，可選 **`/clarify-over-specs`**。
