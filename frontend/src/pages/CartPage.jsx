@@ -1,4 +1,13 @@
-export default function CartPage({ cart, cartError, cartBusy, onUpdateQuantity, onDeleteItem }) {
+export default function CartPage({
+  cart,
+  cartError,
+  cartBusy,
+  orderBusy,
+  orderError,
+  onUpdateQuantity,
+  onDeleteItem,
+  onSubmitOrder,
+}) {
   return (
     <section className="cart-view" aria-label="購物車">
       <div className="cart-view__heading">
@@ -6,6 +15,7 @@ export default function CartPage({ cart, cartError, cartBusy, onUpdateQuantity, 
         <span>{cart.items.length} 項</span>
       </div>
       {cartError && <p className="cart-error" role="alert">{cartError}</p>}
+      {orderError && <p className="cart-error" role="alert">{orderError}</p>}
       {cart.items.length === 0 ? (
         <p className="menu-page__empty">購物車目前是空的。</p>
       ) : (
@@ -47,6 +57,14 @@ export default function CartPage({ cart, cartError, cartBusy, onUpdateQuantity, 
           <footer className="cart-total">
             <span>總金額</span>
             <strong>NT$ {cart.total}</strong>
+            <button
+              type="button"
+              className="action-button"
+              disabled={cartBusy || orderBusy || cart.total === '0.00'}
+              onClick={onSubmitOrder}
+            >
+              確認送單
+            </button>
           </footer>
         </>
       )}

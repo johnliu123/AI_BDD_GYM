@@ -9,6 +9,9 @@ const CLIENT_MESSAGES = {
   SESSION_STORE_UNAVAILABLE: '目前無法建立訪客工作階段。',
   SESSION_STORE_CAPACITY: '工作階段服務已達容量上限。',
   SESSION_CREATE_RATE_LIMITED: '建立訪客工作階段過於頻繁，請稍後再試。',
+  CART_EMPTY: '購物車沒有可送單的項目。',
+  CART_HAS_UNAVAILABLE_ITEMS: '購物車含有不可用項目，請先移除後再送單。',
+  ORDER_NOT_FOUND: '找不到訂單。',
 };
 
 export function toClientErrorPayload(error, fallbackMessage = '請求無法完成。') {

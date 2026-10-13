@@ -1,4 +1,5 @@
 import { runSessionMaintenance } from '../repositories/guestSessionRepository.js';
+import { deleteExpiredIdempotencyKeys } from '../repositories/orderRepository.js';
 import { logServerError } from '../utils/safeLogger.js';
 
 let timer;
@@ -9,7 +10,10 @@ export function startSessionMaintenance(intervalMs = Number(process.env.SESSION_
   }
 
   timer = setInterval(() => {
-    runSessionMaintenance().catch((error) => {
+    Promise.all([
+      runSessionMaintenance(),
+      deleteExpiredIdempotencyKeys(new Date().toISOString()),
+    ]).catch((error) => {
       logServerError('session.maintenance', error);
     });
   }, intervalMs);

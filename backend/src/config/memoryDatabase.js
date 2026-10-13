@@ -15,6 +15,10 @@ function createEmptyState() {
     cart_items: new Map(),
     cart_item_options: [],
     session_create_rate_limits: new Map(),
+    orders: new Map(),
+    order_items: new Map(),
+    order_item_options: [],
+    order_idempotency_keys: new Map(),
   };
 }
 
@@ -31,6 +35,10 @@ function cloneState(state) {
     cart_items: cloneMapRecords(state.cart_items),
     cart_item_options: state.cart_item_options.map((row) => ({ ...row })),
     session_create_rate_limits: cloneMapRecords(state.session_create_rate_limits),
+    orders: cloneMapRecords(state.orders),
+    order_items: cloneMapRecords(state.order_items),
+    order_item_options: state.order_item_options.map((row) => ({ ...row })),
+    order_idempotency_keys: cloneMapRecords(state.order_idempotency_keys),
   };
 }
 
@@ -55,6 +63,22 @@ function executeQuery(state, text, params = []) {
   }
   if (sql === 'DELETE FROM guest_sessions') {
     state.guest_sessions.clear();
+    return { rows: [], rowCount: 0 };
+  }
+  if (sql === 'DELETE FROM order_idempotency_keys') {
+    state.order_idempotency_keys.clear();
+    return { rows: [], rowCount: 0 };
+  }
+  if (sql === 'DELETE FROM order_item_options') {
+    state.order_item_options = [];
+    return { rows: [], rowCount: 0 };
+  }
+  if (sql === 'DELETE FROM order_items') {
+    state.order_items.clear();
+    return { rows: [], rowCount: 0 };
+  }
+  if (sql === 'DELETE FROM orders') {
+    state.orders.clear();
     return { rows: [], rowCount: 0 };
   }
 
@@ -119,6 +143,11 @@ function executeQuery(state, text, params = []) {
   }
 
   if (sql === 'SELECT id FROM carts WHERE guest_session_id = $1') {
+    const cart = [...state.carts.values()].find((entry) => entry.guest_session_id === params[0]);
+    return { rows: cart ? [{ id: cart.id }] : [], rowCount: cart ? 1 : 0 };
+  }
+
+  if (sql === 'SELECT id FROM carts WITH (UPDLOCK, ROWLOCK) WHERE guest_session_id = $1') {
     const cart = [...state.carts.values()].find((entry) => entry.guest_session_id === params[0]);
     return { rows: cart ? [{ id: cart.id }] : [], rowCount: cart ? 1 : 0 };
   }
@@ -325,6 +354,197 @@ function executeQuery(state, text, params = []) {
     }
     row.request_count = params[1];
     return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'SELECT order_id FROM order_idempotency_keys WHERE guest_session_id = $1 AND idempotency_key = $2 AND expires_at > SYSUTCDATETIME()'
+  ) {
+    const key = `${params[0]}::${params[1]}`;
+    const row = state.order_idempotency_keys.get(key);
+    const now = Date.now();
+    if (!row || Date.parse(row.expires_at) <= now) {
+      return { rows: [], rowCount: 0 };
+    }
+    return { rows: [{ order_id: row.order_id }], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'INSERT INTO order_idempotency_keys (guest_session_id, idempotency_key, order_id, created_at, expires_at) VALUES ($1, $2, $3, SYSUTCDATETIME(), $4)'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    state.order_idempotency_keys.set(mapKey, {
+      guest_session_id: params[0],
+      idempotency_key: params[1],
+      order_id: params[2],
+      created_at: nowIso(),
+      expires_at: params[3],
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at) VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME())'
+  ) {
+    const duplicate = [...state.orders.values()].some((entry) => entry.order_number === params[2]);
+    if (duplicate) {
+      const error = new Error('UNIQUE constraint failed: orders.order_number');
+      error.code = 'ORDER_NUMBER_COLLISION';
+      throw error;
+    }
+    const ts = nowIso();
+    state.orders.set(params[0], {
+      id: params[0],
+      guest_session_id: params[1],
+      order_number: params[2],
+      status: params[3],
+      total_amount: params[4],
+      created_at: ts,
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'INSERT INTO order_items (id, order_id, menu_item_id, menu_item_name, quantity, unit_price, line_total) VALUES ($1, $2, $3, $4, $5, $6, $7)'
+  ) {
+    state.order_items.set(params[0], {
+      id: params[0],
+      order_id: params[1],
+      menu_item_id: params[2],
+      menu_item_name: params[3],
+      quantity: params[4],
+      unit_price: params[5],
+      line_total: params[6],
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'INSERT INTO order_item_options (order_item_id, option_group_id, option_group_name, menu_item_option_id, option_name) VALUES ($1, $2, $3, $4, $5)'
+  ) {
+    state.order_item_options.push({
+      order_item_id: params[0],
+      option_group_id: params[1],
+      option_group_name: params[2],
+      menu_item_option_id: params[3],
+      option_name: params[4],
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql.startsWith(
+      'DELETE cio FROM cart_item_options cio INNER JOIN cart_items ci ON cio.cart_item_id = ci.id INNER JOIN carts c ON ci.cart_id = c.id WHERE c.guest_session_id = $1'
+    )
+  ) {
+    const sessionId = params[0];
+    const cart = [...state.carts.values()].find((entry) => entry.guest_session_id === sessionId);
+    if (!cart) {
+      return { rows: [], rowCount: 0 };
+    }
+    const itemIds = new Set(
+      [...state.cart_items.values()].filter((item) => item.cart_id === cart.id).map((item) => item.id)
+    );
+    state.cart_item_options = state.cart_item_options.filter((row) => !itemIds.has(row.cart_item_id));
+    return { rows: [], rowCount: itemIds.size };
+  }
+
+  if (
+    sql.startsWith(
+      'DELETE ci FROM cart_items ci INNER JOIN carts c ON ci.cart_id = c.id WHERE c.guest_session_id = $1'
+    )
+  ) {
+    const sessionId = params[0];
+    const cart = [...state.carts.values()].find((entry) => entry.guest_session_id === sessionId);
+    if (!cart) {
+      return { rows: [], rowCount: 0 };
+    }
+    let removed = 0;
+    for (const [itemId, item] of [...state.cart_items.entries()]) {
+      if (item.cart_id === cart.id) {
+        state.cart_items.delete(itemId);
+        removed += 1;
+      }
+    }
+    return { rows: [], rowCount: removed };
+  }
+
+  if (sql === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at FROM orders WHERE id = $1') {
+    const row = state.orders.get(params[0]);
+    return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
+  }
+
+  if (
+    sql
+    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at FROM orders WHERE order_number = $1 AND guest_session_id = $2'
+  ) {
+    const row = [...state.orders.values()].find(
+      (entry) => entry.order_number === params[0] && entry.guest_session_id === params[1]
+    );
+    return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
+  }
+
+  if (
+    sql
+    === 'SELECT id, menu_item_id, menu_item_name, quantity, unit_price, line_total FROM order_items WHERE order_id = $1 ORDER BY menu_item_name ASC'
+  ) {
+    const rows = [...state.order_items.values()]
+      .filter((item) => item.order_id === params[0])
+      .sort((a, b) => a.menu_item_name.localeCompare(b.menu_item_name));
+    return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql
+    === 'SELECT option_group_id, option_group_name, menu_item_option_id, option_name FROM order_item_options WHERE order_item_id = $1 ORDER BY option_group_id ASC'
+  ) {
+    const rows = state.order_item_options
+      .filter((option) => option.order_item_id === params[0])
+      .sort((a, b) => a.option_group_id.localeCompare(b.option_group_id));
+    return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql.startsWith(
+      'SELECT oio.order_item_id, oio.option_group_id, oio.option_group_name, oio.menu_item_option_id, oio.option_name FROM order_item_options oio INNER JOIN order_items oi ON oio.order_item_id = oi.id WHERE oi.order_id = $1'
+    )
+  ) {
+    const orderId = params[0];
+    const itemRows = [...state.order_items.values()]
+      .filter((item) => item.order_id === orderId)
+      .sort((a, b) => a.menu_item_name.localeCompare(b.menu_item_name));
+    const rows = [];
+    for (const item of itemRows) {
+      const options = state.order_item_options
+        .filter((option) => option.order_item_id === item.id)
+        .sort((a, b) => a.option_group_id.localeCompare(b.option_group_id));
+      for (const option of options) {
+        rows.push({
+          order_item_id: item.id,
+          option_group_id: option.option_group_id,
+          option_group_name: option.option_group_name,
+          menu_item_option_id: option.menu_item_option_id,
+          option_name: option.option_name,
+        });
+      }
+    }
+    return { rows, rowCount: rows.length };
+  }
+
+  if (sql === 'DELETE FROM order_idempotency_keys WHERE expires_at <= $1') {
+    const cutoff = Date.parse(params[0]);
+    let removed = 0;
+    for (const [key, row] of [...state.order_idempotency_keys.entries()]) {
+      if (Date.parse(row.expires_at) <= cutoff) {
+        state.order_idempotency_keys.delete(key);
+        removed += 1;
+      }
+    }
+    return { rows: [], rowCount: removed };
   }
 
   throw new Error(`memoryDatabase: unsupported query: ${sql.slice(0, 120)}`);

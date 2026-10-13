@@ -144,3 +144,10 @@ export async function cartExistsForSession(sessionId, client = getPool()) {
   );
   return result.rowCount > 0;
 }
+
+export async function lockCartForSession(sessionId, client = getPool()) {
+  await client.query(
+    'SELECT id FROM carts WITH (UPDLOCK, ROWLOCK) WHERE guest_session_id = $1',
+    [sessionId]
+  );
+}

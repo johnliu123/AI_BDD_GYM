@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import menuRouter from './routes/menu.js';
 import cartRouter from './routes/cart.js';
+import ordersRouter from './routes/orders.js';
 import { getAllowedOrigins } from './services/cartService.js';
 import { ensureDatabaseReady } from './config/db.js';
 import { startSessionMaintenance } from './jobs/sessionMaintenance.js';
@@ -40,7 +41,7 @@ app.use((req, res, next) => {
       return res.sendStatus(403);
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token, Idempotency-Key');
     return res.sendStatus(204);
   }
 
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(menuRouter);
 app.use(cartRouter);
+app.use(ordersRouter);
 
 app.use((error, req, res, next) => {
   if (res.headersSent) {

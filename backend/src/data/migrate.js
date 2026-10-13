@@ -30,6 +30,10 @@ export async function runMigrations(pool) {
 }
 
 export async function resetCartData(pool) {
+  await pool.query('DELETE FROM order_idempotency_keys');
+  await pool.query('DELETE FROM order_item_options');
+  await pool.query('DELETE FROM order_items');
+  await pool.query('DELETE FROM orders');
   await pool.query('DELETE FROM cart_item_options');
   await pool.query('DELETE FROM cart_items');
   await pool.query('DELETE FROM carts');

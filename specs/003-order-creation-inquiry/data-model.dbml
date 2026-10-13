@@ -1,0 +1,101 @@
+// 資料模型：點餐系統第三迭代－訂單建立與查詢
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: Microsoft SQL Server 關聯式持久化；涵蓋訂單、明細、冪等鍵及與訪客工作階段／購物車的邏輯關聯，不含 HTTP API、UI、migrations 或程式碼實作。
+// @coveredEndpoints: Microsoft SQL Server
+
+Project order_creation_inquiry {
+  database_type: 'Microsoft SQL Server'
+  Note: '''
+本模型在第二迭代購物車之上新增訂單持久化。訂單金額為建立當下快照；查詢不得依最新菜單重算（BR-001、FR-011）。
+
+建立訂單的應用層須在單一資料庫交易中：讀取 cart 並判定所有項目 available → 計算快照金額 → 插入 orders／order_items／order_item_options → 刪除該 cart 的 cart_items（及 cart_item_options）→ 可選寫入 order_idempotency_keys → commit。任一不可用項目、空可用集合或寫入失敗須 rollback，cart 保持原狀（FR-004、FR-005、FR-006）。
+
+冪等：order_idempotency_keys 以 (guest_session_id, idempotency_key) 唯一；命中未過期列時回傳既有 order_id，不二次建單（FR-007）。
+
+查詢授權：orders.guest_session_id 須與目前伺服器驗證的 session 一致（FR-010）。
+
+=== 供 API Plan 使用的持久化契約 ===
+- POST 建立：body 不含權威金額；可選 Idempotency-Key header。
+- GET 查詢：以 order_number + guest_session_id 讀取快照欄位。
+- order_number 全域 UNIQUE；status 本迭代固定 created。
+
+=== 實作設定提醒 ===
+- 沿用 002 的 carts.guest_session_id 字串鍵；orders 以相同型別關聯。
+- memory-sql 測試須同步新增對應表結構。
+  '''
+}
+
+// 訪客 session 邏輯投影（與 002 一致；非完整重述）
+Table guest_sessions {
+  session_id varchar [pk, note: '伺服器簽發的匿名工作階段識別']
+  Note: '邏輯關聯來源：002 guest_sessions；需求追溯 FR-010'
+}
+
+Table carts {
+  id uuid [pk]
+  guest_session_id varchar [not null, unique, ref: > guest_sessions.session_id]
+  Note: '002 既有購物車；建單成功後清空其項目。需求追溯 FR-006'
+}
+
+Table orders {
+  id uuid [pk]
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  order_number varchar(32) [not null, unique, note: 'ORD-YYYYMMDD-XXXXXXXX']
+  status varchar(32) [not null, note: '本迭代固定 created']
+  total_amount numeric(10, 2) [not null, note: '建立當下快照總額；TWD']
+  created_at datetime2 [not null]
+
+  indexes {
+    (guest_session_id, created_at)
+  }
+
+  Note: '訂單標頭。需求追溯 FR-002、FR-003、FR-010、BR-001、SC-001、SC-002'
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  menu_item_id uuid [not null, note: '建立時餐點識別；參照邏輯來源']
+  menu_item_name nvarchar(200) [not null, note: '建立時快照顯示名稱']
+  quantity int [not null]
+  unit_price numeric(10, 2) [not null, note: '含規格加價之單價快照']
+  line_total numeric(10, 2) [not null]
+
+  checks {
+    `quantity > 0` [name: 'order_items_quantity_positive']
+  }
+
+  Note: '訂單明細列。需求追溯 FR-003、BR-001、SC-001、SC-002'
+}
+
+Table order_item_options {
+  order_item_id uuid [not null, ref: > order_items.id]
+  option_group_id uuid [not null]
+  option_group_name nvarchar(100) [not null, note: '快照']
+  menu_item_option_id uuid [not null]
+  option_name nvarchar(100) [not null, note: '快照']
+
+  indexes {
+    (order_item_id, option_group_id) [pk]
+  }
+
+  Note: '每明細列所選規格快照。需求追溯 FR-003、SC-001'
+}
+
+Table order_idempotency_keys {
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  idempotency_key varchar(128) [not null]
+  order_id uuid [not null, ref: > orders.id]
+  created_at datetime2 [not null]
+  expires_at datetime2 [not null]
+
+  indexes {
+    (guest_session_id, idempotency_key) [pk]
+    (expires_at)
+  }
+
+  Note: '建單冪等記錄。需求追溯 FR-007、BR-003、SC-004'
+}
+
+// Constitution self-check: pass

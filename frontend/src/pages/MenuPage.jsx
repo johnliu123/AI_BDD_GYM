@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cartApi } from '../cartApi.js';
+import { orderApi } from '../orderApi.js';
 import { buildAddToCartPayload, loadMenuData } from '../menuApi.js';
 import MealOptionsDialog from '../components/MealOptionsDialog.jsx';
 import CartPage from './CartPage.jsx';
+import OrderLookupPage from './OrderLookupPage.jsx';
 
 const emptyState = {
   hasData: false,
@@ -21,6 +23,12 @@ export default function MenuPage() {
   const [cart, setCart] = useState({ items: [], total: '0.00' });
   const [cartError, setCartError] = useState('');
   const [cartBusy, setCartBusy] = useState(false);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState('');
+  const [orderResult, setOrderResult] = useState(null);
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [lookupResult, setLookupResult] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
   const mountedRef = useRef(true);
@@ -159,6 +167,57 @@ export default function MenuPage() {
     runCartAction(() => cartApi.deleteItem(item.id));
   };
 
+  const submitOrder = async () => {
+    setOrderBusy(true);
+    setOrderError('');
+    const idempotencyKey = globalThis.crypto.randomUUID();
+    try {
+      const response = await orderApi.createOrder({ body: {}, idempotencyKey });
+      setOrderResult(response.order);
+      setLookupResult(null);
+      setLookupError('');
+      const cartResponse = await orderApi.cartApi.getCart();
+      if (mountedRef.current) {
+        setCart(cartResponse.cart);
+        setActiveView('order');
+      }
+    } catch (error) {
+      if (mountedRef.current) {
+        if (error.code === 'CART_HAS_UNAVAILABLE_ITEMS') {
+          setOrderError('購物車含有不可用項目，請先移除後再送單。');
+        } else if (error.code === 'CART_EMPTY') {
+          setOrderError('購物車沒有可送單的項目。');
+        } else {
+          setOrderError('送單失敗，請稍後再試。');
+        }
+      }
+    } finally {
+      if (mountedRef.current) {
+        setOrderBusy(false);
+      }
+    }
+  };
+
+  const lookupOrder = async (orderNumber) => {
+    setLookupBusy(true);
+    setLookupError('');
+    setLookupResult(null);
+    try {
+      const response = await orderApi.getOrder(orderNumber);
+      if (mountedRef.current) {
+        setLookupResult(response.order);
+      }
+    } catch (error) {
+      if (mountedRef.current) {
+        setLookupError(error.code === 'ORDER_NOT_FOUND' ? '找不到訂單。' : '查詢失敗，請稍後再試。');
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLookupBusy(false);
+      }
+    }
+  };
+
   return (
     <main className="menu-page">
       <header className="menu-page__header">
@@ -169,6 +228,9 @@ export default function MenuPage() {
           </button>
           <button type="button" className={activeView === 'cart' ? 'selected' : ''} onClick={() => setActiveView('cart')}>
             購物車 <span className="cart-count">{cart.items.length}</span>
+          </button>
+          <button type="button" className={activeView === 'lookup' ? 'selected' : ''} onClick={() => setActiveView('lookup')}>
+            查詢訂單
           </button>
         </nav>
       </header>
@@ -250,13 +312,40 @@ export default function MenuPage() {
             </section>
           )}
         </>
-      ) : (
+      ) : activeView === 'cart' ? (
         <CartPage
           cart={cart}
           cartError={cartError}
           cartBusy={cartBusy}
+          orderBusy={orderBusy}
+          orderError={orderError}
           onUpdateQuantity={updateQuantity}
           onDeleteItem={deleteItem}
+          onSubmitOrder={submitOrder}
+        />
+      ) : activeView === 'order' && orderResult ? (
+        <section className="order-result" aria-label="訂單建立成功">
+          <h2>訂單已建立</h2>
+          <p>訂單編號：<strong>{orderResult.order_number}</strong></p>
+          <p>狀態：{orderResult.status_label}</p>
+          <p>總金額：NT$ {orderResult.total}</p>
+          <ul>
+            {orderResult.items.map((item) => (
+              <li key={`${item.menu_item_id}-${item.menu_item_name}`}>
+                {item.menu_item_name} × {item.quantity} — NT$ {item.line_total}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="action-button" onClick={() => setActiveView('lookup')}>
+            查詢此訂單
+          </button>
+        </section>
+      ) : (
+        <OrderLookupPage
+          lookupBusy={lookupBusy}
+          lookupError={lookupError}
+          lookupResult={lookupResult}
+          onLookup={lookupOrder}
         />
       )}
 

@@ -27,3 +27,22 @@ export function pickMenuItemWithGroups(items) {
 export function activeOptionIds(item) {
   return item.option_groups.flatMap((group) => group.options.filter((option) => option.is_active).slice(0, 1).map((option) => option.id));
 }
+
+export async function addSampleCartItem(app, session, menuItemId = 'item-1', optionIds = ['opt-1', 'opt-4']) {
+  return request(app)
+    .post('/api/cart/items')
+    .set(session.headers)
+    .send({
+      menu_item_id: menuItemId,
+      quantity: 1,
+      menu_item_option_ids: optionIds,
+    });
+}
+
+export function postCreateOrder(app, session, { body = {}, idempotencyKey } = {}) {
+  const headers = { ...session.headers };
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
+  }
+  return request(app).post('/api/orders').set(headers).send(body);
+}
