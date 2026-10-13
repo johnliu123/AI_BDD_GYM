@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f3eb" />
+    <title>木禾食堂｜菜單與購物車</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <a class="brand" href="#menu" aria-label="木禾食堂菜單">
+          <span class="brand-mark" aria-hidden="true">木</span>
+          <span class="brand-copy"><strong>木禾食堂</strong><small>今日餐桌</small></span>
+        </a>
+        <nav class="primary-nav" aria-label="主要導覽">
+          <button class="nav-link active" type="button" data-view="menu">菜單</button>
+          <button class="nav-link cart-nav" type="button" data-view="cart">
+            購物車 <span id="cart-count" class="count-badge">0</span>
+          </button>
+        </nav>
+        <span class="session-label"><span class="status-dot"></span>訪客工作階段</span>
+      </header>
+
+      <main>
+        <section id="menu-view" class="view">
+          <div class="menu-heading">
+            <div>
+              <p class="eyebrow">木禾食堂　/　午間菜單</p>
+              <h1>今天，想吃點什麼？</h1>
+              <p class="lede">現做主餐與輕食，挑好規格再放進購物車。</p>
+            </div>
+            <div class="service-note"><span class="open-indicator"></span> 午間供應中 <span class="note-divider">·</span> 11:00–14:00</div>
+          </div>
+
+          <div class="menu-layout">
+            <section class="menu-content" aria-label="餐點菜單">
+              <div class="category-row" id="category-filters" aria-label="餐點分類"></div>
+              <div class="menu-grid" id="menu-grid"></div>
+            </section>
+            <aside class="order-aside">
+              <div class="aside-head"><span class="aside-icon" aria-hidden="true">＋</span><div><h2>餐點小計</h2><p id="aside-item-count">尚未選擇餐點</p></div></div>
+              <div class="aside-total"><span>目前總額</span><strong id="aside-total">0</strong></div>
+              <p class="amount-caveat">金額為流程示意值；正式幣別與精度由服務端提供。</p>
+              <button class="button button-primary button-wide" type="button" data-view="cart">查看購物車 <span aria-hidden="true">→</span></button>
+              <div class="aside-rule"></div>
+              <div class="aside-foot"><span class="mini-check">✓</span><span>餐點價格以目前菜單為準</span></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="cart-view" class="view hidden" aria-labelledby="cart-title">
+          <div class="cart-heading">
+            <div><p class="eyebrow">木禾食堂　/　你的選擇</p><h1 id="cart-title">購物車</h1><p class="lede" id="cart-subtitle">檢視餐點與目前金額</p></div>
+            <button class="button button-quiet" type="button" data-view="menu"><span aria-hidden="true">←</span> 返回菜單</button>
+          </div>
+          <div id="cart-alert" class="alert hidden" role="status"></div>
+          <div id="cart-content" class="cart-layout"></div>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        <span>木禾食堂 <span class="footer-dot">·</span> 今日餐桌</span>
+        <span>金額為示意值，正式幣別與精度由服務端提供</span>
+      </footer>
+    </div>
+
+    <dialog id="item-dialog" class="item-dialog" aria-labelledby="dialog-title">
+      <form method="dialog" class="dialog-close-row"><button class="icon-button" aria-label="關閉餐點選擇">×</button></form>
+      <div id="dialog-content"></div>
+    </dialog>
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+    <details class="prototype-tools">
+      <summary>雛形情境</summary>
+      <div class="prototype-tool-actions">
+        <button type="button" data-demo="switch-session">切換訪客工作階段（隔離測試）</button>
+        <button type="button" data-demo="expire-session">模擬工作階段逾期</button>
+        <button type="button" data-demo="price-update">模擬菜單價格更新</button>
+        <button type="button" data-demo="pricing-error">模擬計價暫時失敗</button>
+        <button type="button" data-demo="unavailable-meal">模擬餐點加入後停供</button>
+        <button type="button" data-demo="unavailable-option">模擬所選規格失效</button>
+        <button type="button" data-demo="restore-availability">恢復餐點與規格供應</button>
+        <button type="button" data-demo="reset">重設示範資料</button>
+      </div>
+    </details>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

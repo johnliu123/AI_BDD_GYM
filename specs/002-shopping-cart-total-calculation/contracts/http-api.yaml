@@ -1,0 +1,612 @@
+openapi: 3.0.3
+info:
+  title: 購物車與金額計算 HTTP API
+  version: 0.1.0
+  description: |
+    提供匿名訪客依伺服器簽發工作階段讀取及管理其購物車的 REST JSON 契約；不含登入、訂單、結帳、付款或店家管理。
+
+    **分析邊界**：定義 Express 購物車 API、訪客工作階段 cookie、精確 Origin／CSRF 防護，以及其依賴的既有菜單讀取契約；不實作路由、session middleware、資料表或 migration。
+
+    **資源概覽**：
+    - **Cart**：由伺服器簽發的匿名訪客工作階段識別之購物車；每個工作階段一車，空購物車仍回傳空項目集合與零總額。
+    - **CartItem**：以 DBML 的 `cart_items.id` 作為穩定識別，包含餐點、規格選項、正整數數量及依目前價格計算的金額。
+
+    **與其他端點的整合**：
+    - 瀏覽器只接收伺服器以 `Set-Cookie` 簽發的 opaque 工作階段識別，並在後續請求自動附帶 HttpOnly cookie；呼叫端不得選擇或提交工作階段識別。每個工作階段只可讀寫其購物車，不提供跨瀏覽器／裝置合併。
+    - `GET /cart` 建立或載入目前工作階段與其購物車，回傳同一工作階段的 synchronizer CSRF token。POST／PATCH／DELETE 必須同時通過精確 Origin allowlist 驗證及 `X-CSRF-Token` 驗證。
+    - 客戶端只提交餐點識別、規格選項識別及數量。伺服器重新驗證供應狀態、規格歸屬並讀取最新價格，不採信任何客戶端金額。
+    - 菜單選項沿用既有 `GET /menu-items`；此 API 與既有菜單資料來源須擴充規格群組及選項欄位。餐點價格與選項加價以精確十進位字串提供，選項有效狀態供加入驗證與既有項目可用性判定。
+
+    **整合前置**：`express-session`、`connect-pg-simple` 尚未確認採用或安裝；session store 套件／版本與實際 schema 尚待 T001 核實。訪客 session **idle 24 小時、absolute 7 天**（[spec.md](../spec.md) Q10）須於 server-side store 強制；失效後 API 對使用者只呈現新空購物車，不恢復舊 session 資料（Q9、FR-004）。T002 須於計價實作前確認菜單來源的幣別、precision／scale 與欄位映射；不得以 JavaScript `Number` 作為計價依據。每次有效新增建立獨立購物車項目。餐點或規格加入後失效時，依 `CartItem.availability` 保留並標示不可用，不提供該項目金額且不計入總額；PATCH 回 409，DELETE 仍允許。
+
+    **實作設定提醒**：guest session 套件與版本、store schema、部署允許的精確 Origin 清單，以及 T002 要確認的菜單幣別與 precision／scale，仍屬實作落地事項。**產品已決**（spec Q11）：失效 session 綁定的 cart 列可留於 PostgreSQL，由與 session store **相同週期的定期清理**移除；契約不要求失效當下同步刪除 cart。實作與驗收見 tasks T024（store／清理）、T025（HTTP）。
+  contact:
+    name: API Plan
+x-contract-metadata:
+  sourceSpec: ../spec.md
+  systemAnalysisPlan: ../plan.md
+  uiPlan: ../ui-plan.md
+  dataModel: ../data-model.dbml
+  authModel: 本迭代不提供登入或使用者身份驗證；購物車歸屬僅依伺服器簽發的匿名工作階段識別。
+  guestSessionModel: 伺服器簽發 opaque session ID，僅置於 HttpOnly、SameSite=Lax、Path=/ cookie，不設定 Domain、Max-Age 或 Expires；HTTPS 部署設 Secure。瀏覽器自動附帶 cookie，呼叫端不得自選或提交 session ID。Server-side **idle 24h、absolute 7d**（spec Q10）。無效／逾期 cookie 不得解析至舊工作階段，GET /cart 建立全新空工作階段與購物車；一個工作階段一車，不跨瀏覽器或裝置合併。express-session + connect-pg-simple 僅為研究建議，尚未採用或安裝。
+  sessionTimeoutPolicy: spec Q10 — idle 86400s、absolute 604800s；cookie 不設 Max-Age，過期由 store 強制。
+  orphanedCartCleanupPolicy: spec Q11 — 失效 session 對 API 為新空車；舊 cart 列定期清理（與 session store 清理同週期），非同步刪除。
+  menuCatalogIntegration: 延伸既有 GET /menu-items；回傳餐點供應狀態、精確十進位字串價格、規格群組與選項（含識別、名稱、精確十進位字串加價及有效狀態）；無規格群組回傳空陣列。來源擴充與驗收由 T003 負責。
+  originPolicy: POST、PATCH、DELETE 僅接受與部署設定的前端 Origin 完全相符的 Origin（scheme、host、port）；缺少、null 或不相符均回 403。搭配 session-bound synchronizer token；不得用萬用來源或僅依賴 SameSite。跨 Origin 瀏覽器呼叫須使用 credentials，伺服器僅對明確 allowlist 回傳 credentialed CORS。
+  contentTypes: application/json
+servers:
+  - url: http://localhost:3000/api
+    description: 既有 Express 本機開發端點（PORT 可由環境設定覆寫）
+security: []
+tags:
+  - name: Cart
+    description: 目前匿名訪客工作階段所屬的購物車操作
+  - name: MenuCatalog
+    description: 購物車流程所依賴的既有菜單讀取資料
+paths:
+  /menu-items:
+    get:
+      tags:
+        - MenuCatalog
+      operationId: listMenuItems
+      summary: 取得含規格群組與選項的菜單資料
+      description: |
+        **整合來源**：沿用第一迭代既有 `GET /menu-items`，擴充既有菜單資料來源及回應，不新增菜單服務。回應須包含餐點識別、名稱、目前價格、供應狀態、分類資訊及規格群組；每個群組包含識別、名稱及選項陣列，每個選項包含識別、名稱、目前加價及有效狀態。沒有規格群組時 `option_groups` 為空陣列。
+
+        **精度與驗收**：價格與加價均為精確十進位字串，不可先轉為 JSON number 或 JavaScript `Number`。幣別、precision／scale 由 T002 核對既有來源。T003 驗收須涵蓋多群組、無群組、停用選項及十進位字串保真。
+      responses:
+        '200':
+          description: 菜單資料及可選規格群組
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemListResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '500 菜單或規格資料讀取失敗，不得以不完整群組／選項資料供前端提交。'
+
+  /cart:
+    get:
+      tags:
+        - Cart
+      operationId: getCart
+      summary: 建立或取得目前訪客工作階段的購物車
+      description: |
+        **需求／流程追溯**：User Story 2、FR-004、FR-005、FR-006、FR-008、BR-001、BR-003、SC-002、SC-003、SC-004、SC-005；UI Plan「檢視與管理購物車」、「不可用購物車項目」及「空購物車」流程。
+
+        **訪客工作階段初始化**：瀏覽器首次呼叫或帶有無效／未知／逾期 cookie 呼叫時，伺服器簽發新的 opaque 工作階段 ID，透過 `Set-Cookie` 設為 `guest_session`，並為此新工作階段建立或載入唯一購物車。回應只含新工作階段的空購物車，不恢復、合併或讀取舊工作階段資料。瀏覽器之後自動附帶此 HttpOnly cookie；客戶端不得自行選擇或提交 session ID。每個工作階段一個購物車，沒有跨瀏覽器／裝置合併。session middleware/store 方案與實際 schema 尚未採用或定案。
+
+        **初始化副作用與安全**：此 GET 唯一允許的狀態初始化是建立／載入伺服器端工作階段及其空購物車，並建立或載入 session-bound synchronizer CSRF token；不新增、修改或刪除購物車項目。回應使用 `Cache-Control: no-store`，並在新建或替換工作階段時送出 `Set-Cookie`。若伺服器／框架支援 HEAD，HEAD 不建立或更新工作階段、購物車或 CSRF token。所有後續瀏覽器請求自動攜帶 cookie；跨 Origin 前端須使用 credentials。此 GET 是寫入操作的 CSRF bootstrap，CSRF token 透過回應 JSON 的 `csrf_token` 傳回。
+
+        **資料對齊**：僅依伺服器從有效 cookie 解析並驗證的匿名 session 定位 `carts.guest_session_id`；項目以 `cart_items.id` 識別，規格取自 `cart_item_options`。每次讀取使用目前 `menu_items.price` 與 `menu_item_options.price_adjustment` 計算，不讀取或保存金額快照。餐點或所選規格已失效時仍回傳該項目並標示 `availability: unavailable`，省略該項目金額且不納入 `cart.total`；空購物車回傳 `items: []` 與零總額。
+      responses:
+        '200':
+          description: 目前訪客工作階段的購物車、session-bound CSRF token 及依最新價格計算的金額
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: 新建或替換工作階段時簽發；HttpOnly、SameSite=Lax、Path=/，不設 Domain、Max-Age 或 Expires；HTTPS 部署另設 Secure。瀏覽器自動回傳，呼叫端不得自行構造。
+            Cache-Control:
+              schema:
+                type: string
+              description: 固定為 no-store，避免快取購物車、session-bound token 或 session bootstrap 回應。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '503 session store／PostgreSQL 或最新價格來源不可用，不回傳其他工作階段資料或舊金額；500 資料讀取或計價失敗。無效／逾期 cookie 會建立新工作階段及空購物車，不會存取舊購物車。'
+
+  /cart/items:
+    post:
+      tags:
+        - Cart
+      operationId: addCartItem
+      summary: 將供應中的餐點加入購物車
+      parameters:
+        - $ref: '#/components/parameters/OriginHeader'
+        - $ref: '#/components/parameters/CsrfTokenHeader'
+      description: |
+        **需求／流程追溯**：User Story 1 驗收情境 1（各群組選擇後加入）及情境 4（缺少任一群組選擇時拒絕）；FR-001、FR-002、FR-003、FR-004、FR-005、BR-001、BR-002、BR-003、SC-001、SC-002、SC-004；UI Plan「選擇規格並加入供應中餐點」流程。FR-002 與 BR-002 要求有規格群組的餐點每組恰選一項。
+
+        **資料對齊**：請求必須明確提供 `menu_item_id`、正整數 `quantity` 與 `menu_item_option_ids` 陣列；沒有規格群組的餐點使用空陣列。OpenAPI schema 無法依資料庫中的群組動態表示恰好一個選項的限制，因此應用層須比對該餐點的全部規格群組，驗證每個群組恰有一個所選選項，且每個選項及其群組均屬於該餐點。缺少任一群組選項、同一群組多選、重複選項 ID、無效選項 ID 或選項／群組錯誤歸屬時，均須拒絕整筆新增且購物車維持不變。驗證通過後，將新項目及所有選項明細以同一資料庫交易寫入；每次有效新增均建立新的 `cart_items.id`，不合併既有項目。任何驗證、寫入或必要的最新價格計算失敗，不得留下部分項目或提交未完成變更。金額由目前餐點價格、選項加價與數量計算，並以十進位字串回傳。
+
+        **工作階段與請求來源防護**：購物車只屬於瀏覽器自動附帶的伺服器簽發 HttpOnly session cookie 所解析出的有效訪客工作階段；本文及 URL 不接受工作階段識別。瀏覽器須在同一 session 先由 `GET /cart` 取得 `csrf_token`，再以 `X-CSRF-Token` header 傳送。伺服器須驗證 Origin 與部署設定的前端 Origin 完全相符（scheme、host、port）；缺少、`null` 或不符的 Origin，以及缺少／無效／不屬於目前工作階段的 token 均回 403，且不得變更購物車。session cookie 無效或逾期時不得解析到舊購物車；要求客戶端先 GET /cart 取得新 session/token，原寫入不執行。
+
+        本文不接受價格、項目金額或購物車總額。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '201':
+          description: 已建立新的購物車項目；相同餐點與規格也不合併既有項目
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 固定為 no-store。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '400 未提供選項 ID 陣列、數量非正整數、缺少任一規格群組選項、同群組選取多項、選項 ID 重複／無效，或選項／群組不屬於該餐點；上述驗證拒絕時購物車不變。403 Origin 未精確允許或 CSRF token 缺少／無效／不屬於目前 session；不得變更購物車。404 餐點不存在；409 餐點加入時已未供應；503 session store／PostgreSQL 或最新價格來源不可用且不得採用舊值；500 原子交易或其他伺服器處理失敗且不得留下部分項目。session 無效／逾期時不執行寫入，先 GET /cart 建立新空 session 並取得 token。'
+
+  /cart/items/{item_id}:
+    patch:
+      tags:
+        - Cart
+      operationId: updateCartItemQuantity
+      summary: 更新購物車項目數量
+      parameters:
+        - $ref: '#/components/parameters/CartItemId'
+        - $ref: '#/components/parameters/OriginHeader'
+        - $ref: '#/components/parameters/CsrfTokenHeader'
+      description: |
+        **需求／流程追溯**：User Story 2、FR-004、FR-005、FR-006、FR-007、FR-008、BR-001、BR-003、SC-002、SC-003、SC-004、SC-005；UI Plan「檢視與管理購物車」及「不可用購物車項目」流程。
+
+        **資料對齊**：`item_id` 對應 DBML `cart_items.id`。僅允許修改 `quantity`，且必須是正整數；以目前訪客工作階段所屬 cart 限定更新。成功後重新讀取最新餐點／規格價格並回傳更新後購物車，不持久化衍生金額。若項目餐點或所選規格已失效，拒絕數量修改並回傳 `409 CART_ITEM_UNAVAILABLE`；仍可使用 DELETE 移除此項目。若有效項目的必要最新價格無法取得或計算，數量變更不得提交。
+
+        **工作階段與請求來源防護**：瀏覽器自動附帶伺服器簽發的 HttpOnly session cookie；不得在本文、URL 或自訂識別欄位提交 session ID。須驗證精確 Origin 與 `X-CSRF-Token`，token 必須由同一 session 的 `GET /cart` 取得。Origin 缺少、`null` 或不符，或 token 缺少／無效／session 不符時回 403，購物車不變。session 無效／逾期時不得讀寫舊 cart，要求先 GET /cart 建立新空 session 並取得 token。
+
+        不存在或不屬於目前工作階段的項目使用相同 404 回應，避免洩漏其他工作階段的項目是否存在。本文僅接受數量，不接受任何金額欄位。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: 數量已更新，並回傳使用最新價格重算的購物車
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 固定為 no-store。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '400 數量為零、負數、非整數或本文包含不允許欄位；403 Origin 未精確允許或 CSRF token 缺少／無效／不屬於目前 session，購物車不變；404 項目不存在或不屬於目前工作階段；409 項目餐點已停止供應或所選規格已失效，不可更新數量但可刪除；503 session store／PostgreSQL 或最新價格來源不可用且不得回傳舊金額；500 更新、讀取或計價失敗。session 無效／逾期時不執行寫入，先 GET /cart 建立新空 session 並取得 token。'
+
+    delete:
+      tags:
+        - Cart
+      operationId: deleteCartItem
+      summary: 刪除購物車項目
+      parameters:
+        - $ref: '#/components/parameters/CartItemId'
+        - $ref: '#/components/parameters/OriginHeader'
+        - $ref: '#/components/parameters/CsrfTokenHeader'
+      description: |
+        **需求／流程追溯**：User Story 2、FR-004、FR-005、FR-006、FR-007、FR-008、BR-001、BR-003、SC-002、SC-003、SC-004、SC-005；UI Plan「檢視與管理購物車」、「不可用購物車項目」及「空購物車」流程。
+
+        **資料對齊**：`item_id` 對應 DBML `cart_items.id`。僅從目前訪客工作階段所屬 cart 刪除該項目；不可用項目仍允許刪除。成功後回傳剩餘項目與依目前價格重算的總額；剩餘不可用項目仍保留並標示不可用、不提供項目金額且不計入總額。沒有剩餘項目時回傳空集合及零總額。若剩餘有效項目的必要最新價格無法取得或計算，刪除不得提交。不得以數量零代替刪除。
+
+        **工作階段與請求來源防護**：瀏覽器自動附帶伺服器簽發的 HttpOnly session cookie；不得在本文、URL 或自訂識別欄位提交 session ID。須驗證精確 Origin 與 `X-CSRF-Token`，token 必須由同一 session 的 `GET /cart` 取得。Origin 缺少、`null` 或不符，或 token 缺少／無效／session 不符時回 403，購物車不變。session 無效／逾期時不得讀寫舊 cart，要求先 GET /cart 建立新空 session 並取得 token。
+
+        不存在或不屬於目前工作階段的項目使用相同 404 回應。本文不接受工作階段識別或金額欄位。
+      responses:
+        '200':
+          description: 項目已刪除，並回傳目前購物車；購物車可為空
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: 固定為 no-store。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-errorCases: '403 Origin 未精確允許或 CSRF token 缺少／無效／不屬於目前 session，購物車不變；404 項目不存在或不屬於目前工作階段；503 session store／PostgreSQL 或剩餘項目的最新價格來源不可用，刪除不提交且不得回傳舊金額；500 刪除、讀取或計價失敗。session 無效／逾期時不執行寫入，先 GET /cart 建立新空 session 並取得 token。'
+
+components:
+  schemas:
+    MenuItemListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    MenuItem:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - is_active
+        - category_id
+        - category_name
+        - option_groups
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          $ref: '#/components/schemas/MoneyAmount'
+        is_active:
+          type: boolean
+          description: 餐點目前是否供應；不可供應的餐點不得加入購物車。
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItemOptionGroup'
+          description: 餐點的規格群組；沒有群組時為空陣列。
+
+    MenuItemOptionGroup:
+      type: object
+      required:
+        - id
+        - name
+        - options
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItemOption'
+
+    MenuItemOption:
+      type: object
+      required:
+        - id
+        - name
+        - price_adjustment
+        - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_adjustment:
+          $ref: '#/components/schemas/MoneyAmount'
+        is_active:
+          type: boolean
+          description: 停用選項不得新選；若既有購物車項目參照此選項，該項目標示不可用。
+
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+      description: "共用錯誤包裝，沿用 001 的 { error: { code, message, details? } } 結構。"
+
+    CartResponse:
+      type: object
+      required:
+        - cart
+        - csrf_token
+      properties:
+        cart:
+          $ref: '#/components/schemas/Cart'
+        csrf_token:
+          type: string
+          minLength: 1
+          description: >-
+            綁定目前訪客工作階段的 synchronizer CSRF token；由 GET /cart bootstrap 並於所有成功的購物車回應中提供。僅由瀏覽器保存在記憶體並放入 POST／PATCH／DELETE 的 X-CSRF-Token header，不放入 URL、cookie 或可持久化儲存。
+      example:
+        cart:
+          items: []
+          total: '0'
+        csrf_token: session-bound-example-token
+
+    Cart:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+          description: 目前訪客工作階段購物車項目；空購物車為空陣列。
+        total:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: 只合計 availability=available 項目的餐點及規格金額；不可用項目不計入，亦不含稅金、運費、折扣或付款費用。
+
+    CartItem:
+      type: object
+      required:
+        - id
+        - menu_item_id
+        - menu_item_name
+        - quantity
+        - options
+        - availability
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: DBML cart_items.id 穩定項目識別；讀寫仍須限制於 cookie 所解析的目前工作階段購物車。
+        menu_item_id:
+          type: string
+          format: uuid
+        menu_item_name:
+          type: string
+          description: 由既有餐點資料讀取的目前名稱，供購物車項目辨識。
+        quantity:
+          type: integer
+          minimum: 1
+          description: 正整數數量。
+        availability:
+          type: string
+          enum:
+            - available
+            - unavailable
+          description: 依目前餐點供應狀態及所選規格有效性判定；不可用項目仍保留在購物車供顧客刪除。
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemOption'
+          description: 完整記錄餐點全部規格群組的選擇；每個群組恰有一個選項。餐點沒有規格群組時為空陣列。
+        unit_price:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: availability=available 時為目前餐點價格加上目前所選規格加價；不可用時省略。
+        line_total:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: availability=available 時為目前單價乘以數量；不可用時省略。
+
+    CartItemOption:
+      type: object
+      required:
+        - option_group_id
+        - option_group_name
+        - menu_item_option_id
+        - name
+      properties:
+        option_group_id:
+          type: string
+          format: uuid
+        option_group_name:
+          type: string
+        menu_item_option_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_adjustment:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: 可用項目的目前規格加價；購物車項目不可用或該選項失效時省略。
+
+    AddCartItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - menu_item_id
+        - quantity
+        - menu_item_option_ids
+      properties:
+        menu_item_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          multipleOf: 1
+        menu_item_option_ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+          description: 必須明確提供的所選菜單規格選項 ID 陣列。沒有規格群組時可為空；有規格群組時由應用層比對該餐點全部群組，並驗證每組恰有一個屬於該餐點及該群組的選項。缺少群組選項、同組多選、重複 ID、無效 ID 或錯誤歸屬均拒絕新增且不改變購物車。每組恰選一項為依資料庫群組動態判定的應用層條件，無法由此 schema 靜態表示。
+
+    UpdateCartItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          multipleOf: 1
+
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]+)?$'
+      description: >-
+        精確十進位金額字串；API 不使用 JSON number，避免二進位浮點精度損失。幣別及小數位依既有菜單與資料庫政策，不由此 schema 推定。
+
+  responses:
+    BadRequest:
+      description: 請求格式或購物車輸入驗證失敗
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    Forbidden:
+      description: 請求來源或 session-bound CSRF token 驗證失敗
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            originNotAllowed:
+              summary: Origin 不在部署 allowlist
+              value:
+                error:
+                  code: ORIGIN_NOT_ALLOWED
+                  message: 請求來源不允許。
+            csrfTokenInvalid:
+              summary: CSRF token 缺少或不屬於目前工作階段
+              value:
+                error:
+                  code: CSRF_TOKEN_INVALID
+                  message: 請求驗證失敗，請重新取得工作階段 token。
+    NotFound:
+      description: 餐點或購物車項目不存在；其他工作階段的項目與不存在項目使用相同回應
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    Conflict:
+      description: 餐點加入時未供應，或購物車項目目前不可用而拒絕數量更新
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    ServiceUnavailable:
+      description: Session store／PostgreSQL、菜單價格來源或精確計價服務暫時不可用；不得改用其他工作階段、記憶體購物車、客戶端金額或舊價格
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            sessionStoreUnavailable:
+              summary: Guest session store 暫時不可用
+              value:
+                error:
+                  code: SESSION_STORE_UNAVAILABLE
+                  message: 訪客工作階段暫時無法使用。
+            pricingUnavailable:
+              summary: 最新菜單價格暫時無法取得
+              value:
+                error:
+                  code: PRICING_UNAVAILABLE
+                  message: 目前無法計算購物車金額。
+    InternalError:
+      description: 伺服器、資料讀寫或交易處理失敗
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          description: 固定為 no-store。
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+  parameters:
+    CartItemId:
+      name: item_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: DBML cart_items.id 穩定識別；伺服器仍須限定於 cookie 所解析的目前訪客工作階段購物車。
+
+    OriginHeader:
+      name: Origin
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: >-
+        必須與部署設定的允許前端 Origin 完全相符（scheme、host、port）；缺少、null、萬用或不符來源均拒絕。不得以 Referer 或 SameSite 代替此檢查。
+
+    CsrfTokenHeader:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      description: >-
+        由目前同一訪客工作階段的 GET /cart 回應取得；必須以常數時間安全比較等價方式驗證且 session 綁定。缺少、無效或屬於其他 session 的 token 均拒絕請求。
+
+      # Constitution self-check: pass

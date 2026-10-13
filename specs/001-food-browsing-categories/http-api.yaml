@@ -9,7 +9,7 @@ info:
 
     **資源概覽**：
     - Categories：餐點分類列表
-    - MenuItems：餐點清單，含名稱、圖片、價格與分類
+    - MenuItems：餐點清單，含名稱、圖片、精確十進位字串價格、分類、供應狀態與規格群組／選項
 
     **與其他端點的整合**：
     - 前端會讀取分類後呈現卡片式菜單
@@ -60,7 +60,7 @@ paths:
       description: |
         **需求／流程追溯**：FR-001、FR-002、SC-001、SC-002
 
-        **資料對齊**：對應 `menu_items` + `categories` 關聯，回傳餐點 `name`、`price`、`image_url`、`category_name`
+        **資料對齊**：對應 `menu_items` + `categories` 關聯，回傳餐點 `name`、`price`、`image_url`、`category_name`、`is_active`，以及所有規格群組與選項。無規格群組時回傳空的 `option_groups`。
       parameters:
         - $ref: '#/components/parameters/CategoryIdFilter'
       responses:
@@ -122,8 +122,10 @@ components:
         - id
         - name
         - price
+        - is_active
         - category_id
         - category_name
+        - option_groups
       properties:
         id:
           type: string
@@ -135,14 +137,58 @@ components:
           format: uri
           nullable: true
         price:
-          type: number
-          format: float
-          description: 以貨幣值表示，幣別格式待確認
+          $ref: '#/components/schemas/MoneyAmount'
+        is_active:
+          type: boolean
+          description: 餐點目前是否供應。
         category_id:
           type: string
           format: uuid
         category_name:
           type: string
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItemOptionGroup'
+          description: 餐點規格群組；沒有群組時為空陣列。
+    MenuItemOptionGroup:
+      type: object
+      required:
+        - id
+        - name
+        - options
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItemOption'
+    MenuItemOption:
+      type: object
+      required:
+        - id
+        - name
+        - price_adjustment
+        - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_adjustment:
+          $ref: '#/components/schemas/MoneyAmount'
+        is_active:
+          type: boolean
+          description: 停用選項不得新選。
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]+)?$'
+      description: 精確十進位字串；幣別及小數位仍依既有菜單政策確認，不轉為 JSON number。
     MenuItemListResponse:
       type: object
       required:

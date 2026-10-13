@@ -5,10 +5,13 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "audit:sca": "npm audit --audit-level=moderate --strict-ssl=false"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "dotenv": "^16.4.7",
+    "express": "^4.19.2",
+    "mssql": "^12.7.5"
   },
   "devDependencies": {
     "supertest": "^7.0.0"

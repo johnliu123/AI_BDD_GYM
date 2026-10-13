@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadMenuData } from './menuApi.js';
+import { buildAddToCartPayload, isOptionSelectionComplete, loadMenuData } from './menuApi.js';
 
 function jsonResponse(body, ok = true) {
   return {
@@ -49,4 +49,28 @@ test('passes an abort signal to both API requests and rejects when cancelled', a
 
   await assert.rejects(pending, { name: 'AbortError' });
   assert.deepEqual(receivedSignals, [controller.signal, controller.signal]);
+});
+
+test('option selection helpers enforce one choice per group and inactive items', () => {
+  const item = {
+    id: 'item-1',
+    is_active: true,
+    option_groups: [
+      { id: 'g1', options: [{ id: 'o1', is_active: true }] },
+      { id: 'g2', options: [{ id: 'o2', is_active: true }] },
+    ],
+  };
+
+  assert.equal(isOptionSelectionComplete(item.option_groups, {}), false);
+  assert.equal(isOptionSelectionComplete(item.option_groups, { g1: 'o1' }), false);
+  assert.equal(isOptionSelectionComplete(item.option_groups, { g1: 'o1', g2: 'o2' }), true);
+
+  const incomplete = buildAddToCartPayload(item, { g1: 'o1' });
+  assert.equal(incomplete.error, 'INCOMPLETE_OPTION_SELECTION');
+
+  const inactive = buildAddToCartPayload({ ...item, is_active: false }, { g1: 'o1', g2: 'o2' });
+  assert.equal(inactive.error, 'ITEM_UNAVAILABLE');
+
+  const ready = buildAddToCartPayload(item, { g1: 'o1', g2: 'o2' });
+  assert.deepEqual(ready.payload.menu_item_option_ids, ['o1', 'o2']);
 });

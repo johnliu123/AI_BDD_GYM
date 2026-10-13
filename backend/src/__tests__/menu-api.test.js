@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import app from '../server.js';
+import { setupTestDatabase } from '../test-utils/testHarness.js';
+
+test.before(async () => {
+  await setupTestDatabase();
+});
+
+const { default: app } = await import('../server.js');
 
 test('GET /api/categories returns categories list', async () => {
   const response = await request(app).get('/api/categories');

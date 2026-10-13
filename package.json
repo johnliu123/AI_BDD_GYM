@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "name": "ai-bdd-gym",
+  "scripts": {
+    "audit:sca": "npm run audit:sca --prefix backend && npm run audit:sca --prefix frontend",
+    "test": "npm test --prefix backend && npm test --prefix frontend"
+  }
+}

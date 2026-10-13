@@ -1,0 +1,142 @@
+// 資料模型： 點餐系統第二迭代－購物車與金額計算
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: Microsoft SQL Server 關聯式持久化；涵蓋訪客工作階段持久化邏輯投影、購物車、餐點及規格資料關聯，不含 HTTP API、UI、migrations 或程式碼實作。
+// @coveredEndpoints: Microsoft SQL Server
+
+Project shopping_cart_total_calculation {
+  database_type: 'Microsoft SQL Server'
+  Note: '''
+本模型保存訪客工作階段持久化的邏輯投影、工作階段購物車、餐點項目及所選規格的關聯。本迭代沒有登入或帳號認證；工作階段識別是伺服器簽發的匿名識別，不代表個人或帳號。
+
+`guest_session_store_projection` 僅表達伺服器端工作階段持久化所需的邏輯資料，不宣稱 `express-session` 或 `connect-pg-simple` 已安裝，也不宣稱其實際資料表、欄位名稱、型別或外鍵結構。套件仍是研究建議；實際 schema 與本模型的對應須待版本、store 設定及產生／管理方式確認。`carts` 與此投影的參照表示邏輯上的工作階段歸屬，不預先承諾套件資料表可直接建立實體外鍵。
+
+餐點可有零個或多個規格群組；本模型不要求餐點必須具有規格群組。餐點具有規格群組時，新增購物車項目的應用層必須在同一資料庫交易中讀取該餐點全部現存群組，驗證每個群組恰有一筆有效所選選項後才寫入項目與選項明細；任一群組缺選、多選或選項無效時，整筆交易不得留下變更。沒有規格群組的餐點可在沒有選項明細的情況下加入。
+資料結構以 cart_item_options 的複合主鍵保證每個項目每個群組至多一筆所選選項，並以複合外鍵保證群組及選項均隸屬該項目的餐點；「至少一筆」不由資料庫結構保證，而由上述新增交易驗證。相同餐點及規格的每次有效加入均建立新的 cart_item，不合併數量。
+
+=== 端點：PostgreSQL 關聯式持久化 ===
+資料契約與不變量：
+- 每個有效的伺服器端訪客工作階段最多對應一個購物車；工作階段識別由伺服器簽發並經 server-side session store 驗證，不是客戶端自報值或使用者帳號。
+- 工作階段資料必須保留於伺服器端，並於有效期限後失效；idle／absolute timeout 的數值及實際 store schema 尚未決定。工作階段逾期後不得再據以存取購物車；購物車資料的保留／清理政策尚未決定。
+- 購物車項目以 cart_items.id 作為穩定識別。每次有效新增都建立獨立 cart_item；不得對購物車、餐點及所選規格組合新增唯一限制或合併數量。
+- 餐點可沒有規格群組；若有群組，新增項目的應用層須在新增交易中驗證全部現存群組各恰有一個有效所選選項。cart_item_options 的複合主鍵結構保證每群組至多一選，複合外鍵保證選項及群組屬於項目的餐點。
+- cart_items.quantity 為正整數。刪除項目使用刪除操作，不以零或負數表示。
+- 餐點加入時須檢查 menu_items.is_active；未供應餐點拒絕加入。項目建立後餐點下架或所選規格停用時，保留項目並標示不可用、不提供項目金額且不計入總額；拒絕修改數量但允許刪除（FR-008、Q8）。
+- 計價使用目前 menu_items.price、所選 menu_item_options.price_adjustment 與數量；不持久化項目金額或購物車總額，避免將衍生值當成權威資料。
+- 所有價格欄位使用 PostgreSQL NUMERIC（亦即 DECIMAL）精確數值；precision／scale 與幣別沿用既有菜單來源。API 金額以十進位字串傳輸，不轉換為二進位浮點數。
+
+交易邊界與失敗處理：
+- 新增項目及其所有所選規格明細須在同一資料庫交易中完成；交易內應以餐點全部現存規格群組核對所選有效選項，確保每群組恰一筆；餐點沒有群組時允許零筆選項。任一群組缺選、選項無效或寫入驗證失敗時整筆回滾，不留下部分項目。
+- 數量修改或項目刪除須以單一原子資料庫操作完成；交易隔離等級與重試政策留待實作分析決定。
+- 讀取或修改購物車金額時，以目前餐點及規格價格重新計算；不得採信客戶端傳入金額。
+
+=== 供 API Plan 使用的持久化契約 ===
+- 以伺服器端驗證的訪客工作階段識別定位唯一購物車，並以 cart_id 限定項目讀寫；不得以客戶端自報的工作階段識別或登入帳號作為購物車歸屬依據。
+- 新增時提供 menu_item_id、正整數 quantity 及所選 menu_item_option_id；伺服器於同一新增交易中查核該餐點全部現存規格群組，具有群組時驗證每群組恰一個有效選項，沒有群組時允許不提供選項，並驗證餐點供應狀態及選項歸屬後再寫入。
+- cart_items.id 是項目穩定識別；每次有效加入建立新的 cart_item，不合併相同餐點／規格。
+- 項目金額與總金額由最新菜單價格及規格加價計算；資料庫不保存這些衍生金額。
+
+=== 實作設定提醒 ===
+- Session store 套件與版本尚未確認或安裝；須核實實際資料表／欄位／型別、session 資料序列化、schema 建立方式，以及是否能與購物車建立實體外鍵。本模型的 `guest_session_store_projection` 與 `Ref` 僅為邏輯投影及歸屬關係，不視為未決功能需求。
+- Session idle／absolute timeout 數值，以及 session 逾期後購物車資料的保留或清理政策，屬於實作設定事項，需於實作分析階段決定。
+- 既有菜單價格來源及 PostgreSQL 欄位的幣別、precision／scale 對應，需由 T002 核對；這不是需求規格未定，僅是實作前置驗證。
+- 第一迭代菜單來源的欄位精度、刻度及其 PostgreSQL 映射由 T002 核對；本模型的 NUMERIC 欄位不另行承諾精度／刻度，也不代表 migration。
+  '''
+}
+
+// 菜單資料參照：既有 001 餐點表的本功能必要欄位投影；不是新增或完整重定義該表。
+Table menu_items {
+  id uuid [pk]
+  price numeric(10, 2) [not null, note: '目前餐點價格；TWD；與 menuData.js 十進位字串兩位小數對齊（T002）']
+  is_active boolean [not null, note: '加入時須為供應中']
+
+  Note: '既有餐點資料的必要欄位投影；is_active=false 時，已加入購物車的項目保留並標示不可用。需求追溯： FR-001, FR-003, FR-005, FR-008, BR-001, SC-002, SC-004, SC-005'
+}
+
+Table menu_item_option_groups {
+  id uuid [pk]
+  menu_item_id uuid [not null, ref: > menu_items.id]
+  name varchar [not null]
+
+  indexes {
+    (id, menu_item_id) [unique]
+  }
+
+  Note: '餐點的規格群組；餐點可沒有群組，已有群組的新增選擇完整性由應用層交易驗證。複合唯一索引用於保證選項群組與餐點的複合外鍵。需求追溯： FR-002, BR-002, SC-001'
+}
+
+Table menu_item_options {
+  id uuid [pk]
+  menu_item_id uuid [not null]
+  option_group_id uuid [not null]
+  name varchar [not null]
+  price_adjustment numeric(10, 2) [not null, note: '目前規格加價；TWD；兩位小數（T002）']
+  is_active boolean [not null, note: '目前是否可供選擇；停用時保留既有購物車參照並標示項目不可用']
+
+  indexes {
+    (id, option_group_id, menu_item_id) [unique]
+  }
+
+  Note: '餐點規格選項及目前加價；is_active=false 時，既有購物車項目保留但標示不可用；複合外鍵確保選項所屬群組及餐點一致，不保存加入時價格快照。需求追溯： FR-002, FR-005, FR-008, BR-001, BR-002, SC-001, SC-002, SC-003, SC-005'
+}
+
+// Session store 的概念投影，不是已確認或已安裝套件的實體 schema。
+Table guest_session_store_projection {
+  session_id varchar [pk, note: '伺服器簽發的匿名工作階段識別之邏輯鍵；不代表個人或帳號']
+  session_data jsonb [not null, note: '伺服器端工作階段狀態的邏輯投影；實際序列化型別待 store adapter 確認']
+  expires_at timestamptz [not null, note: '有效期限的邏輯投影；須遵守 idle 與 absolute expiry 中較早者，欄位映射及 timeout 數值未定']
+
+  Note: '伺服器端工作階段持久化的邏輯投影，供購物車歸屬分析使用。非 express-session／connect-pg-simple 已安裝 schema 的宣告；實際表名、欄位、型別、索引、期限更新及外鍵可行性均待套件版本與 store 設定確認。需求追溯： FR-004, SC-004'
+}
+
+Table carts {
+  id uuid [pk]
+  guest_session_id varchar [not null, unique, ref: > guest_session_store_projection.session_id, note: '唯一訪客工作階段的邏輯識別；僅接受伺服器端驗證結果']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  Note: '每個有效訪客工作階段一個購物車；不同工作階段互相隔離，不綁定帳號、不支援跨裝置或瀏覽器合併。與 session store 的 Ref 是邏輯關係，不保證套件實體 schema 提供相同外鍵。需求追溯： FR-004, SC-004'
+}
+
+Table cart_items {
+  id uuid [pk, note: '每次有效加入建立的穩定購物車項目識別']
+  cart_id uuid [not null, ref: > carts.id]
+  menu_item_id uuid [not null, ref: > menu_items.id]
+  quantity integer [not null, note: '正整數；資料庫檢查約束見下方']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (id, menu_item_id) [unique]
+    (cart_id)
+  }
+
+  checks {
+    `quantity > 0` [name: 'cart_items_quantity_positive']
+  }
+
+  Note: '餐點購物車項目；不建立 cart_id、menu_item_id 或規格組合的唯一限制，也不持久化項目金額。availability 依目前餐點與所選選項狀態於讀取時判定；不可用項目保留，金額不計入總額。需求追溯： FR-001, FR-003, FR-006, FR-007, FR-008, BR-001, BR-003, SC-001, SC-002, SC-003, SC-004, SC-005'
+}
+
+Table cart_item_options {
+  cart_item_id uuid [not null]
+  menu_item_id uuid [not null]
+  option_group_id uuid [not null]
+  menu_item_option_id uuid [not null]
+
+  indexes {
+    (cart_item_id, option_group_id) [pk, note: '結構保證同一項目每個規格群組至多一個選項；新增時每群組至少一個由應用層交易驗證']
+  }
+
+  Note: '購物車項目所選規格；餐點具有群組時，應用層須於新增交易驗證全部現存群組各恰有一筆；無群組時允許零筆。停用選項仍保留關聯以顯示不可用項目。複合外鍵確保群組／選項歸屬於該項目的餐點。需求追溯： FR-002, FR-005, FR-008, BR-001, BR-002, SC-001, SC-002, SC-003, SC-005'
+}
+
+// 複合參照保證購物車選項所屬項目、群組與餐點一致；每群組恰一筆的下限由新增交易驗證。
+Ref: menu_item_option_groups.(id, menu_item_id) < menu_item_options.(option_group_id, menu_item_id)
+Ref: cart_items.(id, menu_item_id) < cart_item_options.(cart_item_id, menu_item_id)
+Ref: menu_item_option_groups.(id, menu_item_id) < cart_item_options.(option_group_id, menu_item_id)
+Ref: menu_item_options.(id, option_group_id, menu_item_id) < cart_item_options.(menu_item_option_id, option_group_id, menu_item_id)
+
+// 實體摘要：訪客工作階段持久化邏輯投影（匿名 session；FR-004、SC-004）、工作階段購物車（一個 session 一車；FR-004、SC-004）、餐點項目（穩定 id；FR-001、FR-006、FR-007、BR-003）、規格群組與選項（單選關聯；FR-002、BR-002）。
+
+// Constitution self-check: pass
