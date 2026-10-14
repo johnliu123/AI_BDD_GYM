@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import request from 'supertest';
 import { attachGuestSession } from '../../middleware/guestSession.js';
 import { readCart } from '../../services/cartService.js';
 import { buildCartState } from '../../services/cartPricing.js';
@@ -12,10 +13,18 @@ import {
   loadOrderByOrderNumber,
 } from '../../repositories/orderRepository.js';
 import { getPool } from '../../config/db.js';
+import {
+  addSampleCartItem,
+  bootstrapCartSession,
+  merchantGet,
+  postCreateOrder,
+} from '../testHelpers.js';
 
 test.before(async () => {
   await setupTestDatabase();
 });
+
+const { default: app } = await import('../../server.js');
 
 test('guest session middleware is a callable Express middleware', () => {
   assert.equal(typeof attachGuestSession, 'function');
@@ -58,6 +67,38 @@ test('orderRepository loads order header and line snapshots by order number', as
   assert.equal(order.order_number, orderNumber);
   assert.equal(order.status, 'created');
   assert.equal(order.status_label, '已建立');
+  assert.equal(order.payment_status, 'unpaid');
+  assert.equal(order.payment_status_label, '未付款');
   assert.equal(order.total, '220.00');
   assert.equal(order.items.length, 1);
+});
+
+test('GET /api/orders returns payment fields after create (004 regression)', async () => {
+  const session = await bootstrapCartSession(app);
+  await addSampleCartItem(app, session);
+  const created = await postCreateOrder(app, session);
+  const orderNumber = created.body.order.order_number;
+
+  const fetched = await request(app)
+    .get(`/api/orders/${encodeURIComponent(orderNumber)}`)
+    .set('Cookie', session.headers.Cookie);
+
+  assert.equal(fetched.status, 200);
+  assert.equal(fetched.body.order.payment_status, 'unpaid');
+  assert.equal(fetched.body.order.payment_status_label, '未付款');
+});
+
+test('GET /api/merchant/orders still lists created orders with payment summary', async () => {
+  const customer = await bootstrapCartSession(app);
+  await addSampleCartItem(app, customer);
+  const created = await postCreateOrder(app, customer);
+  const listed = await merchantGet(app, '/api/merchant/orders');
+
+  assert.equal(listed.status, 200);
+  const row = listed.body.orders.find(
+    (entry) => entry.order_number === created.body.order.order_number
+  );
+  assert.ok(row);
+  assert.equal(row.payment_status, 'unpaid');
+  assert.equal(row.payment_status_label, '未付款');
 });

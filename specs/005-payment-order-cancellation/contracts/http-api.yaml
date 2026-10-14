@@ -1,0 +1,619 @@
+openapi: 3.0.3
+info:
+  title: 付款與取消訂單 HTTP API
+  version: 0.1.0
+  description: |
+    第五迭代：顧客對訂單發起模擬付款、取消訂單；擴充顧客／店家查詢之付款欄位；出餐狀態新增 `cancelled`。
+
+    **整合**：`POST pay`／`POST cancel` 須 **CSRF + Origin**（同 003 建單）。可選 **`Idempotency-Key`**（pay）。店家 API 仍為 **`X-Merchant-Token`**，不用 guest CSRF。
+
+    **金額**：應付金額一律為伺服器 `orders.total_amount` 快照；請求 body 不得覆寫。
+
+    **模擬金流**：伺服器程序內同步 stub；`PayOrderRequest.simulate_outcome` 僅在非 production 且 `ALLOW_PAYMENT_SIMULATE_BODY=true` 時生效（見 research）。
+x-contract-metadata:
+  sourceSpec: ../spec.md
+  systemAnalysisPlan: ../plan.md
+  uiPlan: ../ui-plan.md
+  dataModel: ../data-model.dbml
+  priorOrderApi: ../../003-order-creation-inquiry/contracts/http-api.yaml
+  priorMerchantApi: ../../004-merchant-serving-workflow/contracts/http-api.yaml
+  authModel: 顧客 guest session + CSRF；店家 X-Merchant-Token
+  paymentIdempotencyPolicy: TTL 86400s；僅 HTTP 200 且 payment_status=paid 寫入 payment_idempotency_keys；failed／4xx／5xx 未決不寫入（spec FR-012 澄清 2026-10-14）
+  paymentSimulateEnv: PAYMENT_SIMULATE_OUTCOME=success|failure
+servers:
+  - url: http://localhost:3000/api
+    description: 本機 Express
+security: []
+tags:
+  - name: CustomerOrders
+    description: 顧客付款、取消與查詢擴充
+  - name: MerchantOrders
+    description: 店家列表／詳情付款欄位（004 動作語意不變）
+paths:
+  /orders/{order_number}/pay:
+    post:
+      tags:
+        - CustomerOrders
+      operationId: payOrder
+      summary: 對訂單發起付款（模擬）
+      description: |
+        **需求追溯**：User Story 1–2；FR-001–FR-006、FR-010–FR-012；SC-001–SC-002、SC-005–SC-006。
+
+        允許 `payment_status` 為 `unpaid` 或 `failed`（或 stale `pending`，見 research）。成功回 200 與 `OrderResponse`；`paid` 時寫入冪等映射。
+      parameters:
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayOrderRequest'
+      responses:
+        '200':
+          description: 付款完成或冪等命中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          description: 狀態不允許付款
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              examples:
+                alreadyPaid:
+                  value:
+                    error:
+                      code: ORDER_ALREADY_PAID
+                      message: 訂單已付款。
+                inProgress:
+                  value:
+                    error:
+                      code: PAYMENT_IN_PROGRESS
+                      message: 付款處理中，請稍後再試。
+                cancelled:
+                  value:
+                    error:
+                      code: ORDER_CANCELLED
+                      message: 訂單已取消，無法付款。
+          x-errorCases: ORDER_ALREADY_PAID; PAYMENT_IN_PROGRESS; ORDER_CANCELLED
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /orders/{order_number}/cancel:
+    post:
+      tags:
+        - CustomerOrders
+      operationId: cancelOrder
+      summary: 取消訂單
+      description: |
+        **需求追溯**：User Story 3；FR-007–FR-009、FR-011、FR-013；SC-003–SC-004。
+
+        僅 `status=created` 可取消。`payment_status=pending` 且 **未逾時**（`PAYMENT_PENDING_STALE_SEC`，預設 120s）→ **409** `PAYMENT_IN_PROGRESS`。**Stale pending** 可取消：同一交易將 pending 中止為 `failed` 後 `status=cancelled`（不得 pending+cancelled 並存）。已 `paid` 時同步模擬退款為 `refunded` 並回傳 `refunded_at`。
+      parameters:
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Origin
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: 已取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          description: 不可取消
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              examples:
+                notCancellable:
+                  value:
+                    error:
+                      code: ORDER_NOT_CANCELLABLE
+                      message: 目前狀態無法取消訂單。
+                paymentInProgress:
+                  value:
+                    error:
+                      code: PAYMENT_IN_PROGRESS
+                      message: 付款處理中，請稍後再試。
+                alreadyCancelled:
+                  value:
+                    error:
+                      code: ORDER_CANCELLED
+                      message: 訂單已取消。
+          x-errorCases: ORDER_NOT_CANCELLABLE; PAYMENT_IN_PROGRESS; ORDER_CANCELLED
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /orders/{order_number}:
+    get:
+      tags:
+        - CustomerOrders
+      operationId: getOrder
+      summary: 查詢訂單（含付款與取消狀態）
+      description: |
+        **需求追溯**：User Story 4；FR-016、FR-011、FR-015；SC-001。
+
+        行為與 003 相同（session 綁定）；`Order` 含 `payment_status`／`payment_status_label`；`status` 可含 `cancelled`。
+      parameters:
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      responses:
+        '200':
+          description: 訂單明細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '403':
+          description: Session 無效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders:
+    get:
+      tags:
+        - MerchantOrders
+      operationId: listMerchantOrders
+      summary: 店家訂單列表（含付款篩選）
+      description: |
+        **需求追溯**：User Story 5；FR-017–FR-018、FR-020；SC-006。
+
+        004 行為保留；新增 `payment_status` query 與摘要欄位。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - in: query
+          name: payment_status
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+      responses:
+        '200':
+          description: 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantOrderListResponse'
+        '400':
+          description: 無效篩選
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+              examples:
+                invalidPaymentFilter:
+                  value:
+                    error:
+                      code: INVALID_PAYMENT_STATUS_FILTER
+                      message: 無效的付款狀態篩選。
+                invalidStatusFilter:
+                  value:
+                    error:
+                      code: INVALID_STATUS_FILTER
+                      message: 無效的訂單狀態篩選。
+          x-errorCases: INVALID_PAYMENT_STATUS_FILTER; INVALID_STATUS_FILTER
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}:
+    get:
+      tags:
+        - MerchantOrders
+      operationId: getMerchantOrder
+      summary: 店家訂單詳情（含付款）
+      description: |
+        **需求追溯**：User Story 5；FR-017、FR-020；SC-006。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      responses:
+        '200':
+          description: 詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /merchant/orders/{order_number}/accept:
+    post:
+      tags:
+        - MerchantOrders
+      operationId: acceptMerchantOrder
+      summary: 接單（拒絕已取消）
+      description: |
+        **需求追溯**：FR-019；004 accept 語意。`status=cancelled` → 409 ORDER_STATUS_CONFLICT。
+      parameters:
+        - in: header
+          name: X-Merchant-Token
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: order_number
+          required: true
+          schema:
+            type: string
+            pattern: '^ORD-[0-9]{8}-[0-9A-F]{8}$'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantOrderActionRequest'
+      responses:
+        '200':
+          description: 已接單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          $ref: '#/components/responses/OrderStatusConflict'
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    OrderStatus:
+      type: string
+      enum:
+        - created
+        - accepted
+        - preparing
+        - completed
+        - cancelled
+
+    PaymentStatus:
+      type: string
+      enum:
+        - unpaid
+        - pending
+        - paid
+        - failed
+        - refunded
+
+    PayOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        simulate_outcome:
+          type: string
+          enum:
+            - success
+            - failure
+          description: 僅非 production 且伺服器允許時生效；不得含 total 或 items。
+
+    CancelOrderRequest:
+      type: object
+      additionalProperties: false
+      description: 空物件；不得提交金額或明細。
+
+    MerchantOrderActionRequest:
+      type: object
+      additionalProperties: false
+
+    MerchantOrderSummary:
+      type: object
+      required:
+        - order_number
+        - status
+        - status_label
+        - payment_status
+        - payment_status_label
+        - created_at
+        - total
+      properties:
+        order_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        status_label:
+          type: string
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_status_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+
+    MerchantOrderListResponse:
+      type: object
+      required:
+        - orders
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/MerchantOrderSummary'
+
+    OrderResponse:
+      type: object
+      required:
+        - order
+      properties:
+        order:
+          $ref: '#/components/schemas/Order'
+
+    Order:
+      type: object
+      required:
+        - order_number
+        - status
+        - status_label
+        - payment_status
+        - payment_status_label
+        - created_at
+        - total
+        - items
+      properties:
+        order_number:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        status_label:
+          type: string
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_status_label:
+          type: string
+        payment_failure_reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        status_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        refunded_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: payment_status 為 refunded 時之模擬退款完成時間（FR-013）
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderItem:
+      type: object
+      required:
+        - menu_item_id
+        - menu_item_name
+        - quantity
+        - unit_price
+        - line_total
+        - options
+      properties:
+        menu_item_id:
+          type: string
+          format: uuid
+        menu_item_name:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unit_price:
+          $ref: '#/components/schemas/MoneyAmount'
+        line_total:
+          $ref: '#/components/schemas/MoneyAmount'
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemOption'
+
+    OrderItemOption:
+      type: object
+      required:
+        - option_group_id
+        - option_group_name
+        - menu_item_option_id
+        - name
+      properties:
+        option_group_id:
+          type: string
+          format: uuid
+        option_group_name:
+          type: string
+        menu_item_option_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]+)?$'
+
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: |
+                付款／取消：`ORDER_ALREADY_PAID`、`PAYMENT_IN_PROGRESS`、`ORDER_NOT_CANCELLABLE`、
+                `ORDER_CANCELLED`；店家／出餐：`ORDER_STATUS_CONFLICT`、`INVALID_STATUS_FILTER`、
+                `INVALID_PAYMENT_STATUS_FILTER`；共用：`ORDER_NOT_FOUND`。
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+  responses:
+    Forbidden:
+      description: CSRF 或 Origin 不符
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    MerchantUnauthorized:
+      description: 缺少或無效的 X-Merchant-Token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            unauthorized:
+              value:
+                error:
+                  code: MERCHANT_UNAUTHORIZED
+                  message: 店家憑證無效。
+      x-errorCases: MERCHANT_UNAUTHORIZED
+    MerchantNotConfigured:
+      description: 伺服器未設定 MERCHANT_TOKEN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+      x-errorCases: MERCHANT_NOT_CONFIGURED
+    OrderNotFound:
+      description: 查無或不屬於 session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+      x-errorCases: ORDER_NOT_FOUND
+    OrderStatusConflict:
+      description: 出餐狀態衝突（含已取消）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          examples:
+            conflict:
+              value:
+                error:
+                  code: ORDER_STATUS_CONFLICT
+                  message: 訂單狀態已變更，請重新整理後再試。
+      x-errorCases: ORDER_STATUS_CONFLICT
+    InternalError:
+      description: 未預期錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'

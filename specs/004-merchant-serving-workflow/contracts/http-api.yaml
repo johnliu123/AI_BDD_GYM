@@ -7,13 +7,16 @@ info:
 
     **整合**：店家路由不使用 guest session 或 CSRF。顧客 `GET /api/orders/{order_number}` 仍僅限 HttpOnly `guest_session` cookie（003 語意不變）。
 
-    **狀態機**：`created` → `accepted` → `preparing` → `completed`；非法或並發衝突回 409 `ORDER_STATUS_CONFLICT`。
+    **狀態機**：`created` → `accepted` → `preparing` → `completed`；顧客取消可為 `cancelled`（005）。非法或並發衝突回 409 `ORDER_STATUS_CONFLICT`。
+
+    **付款欄位（005 對齊）**：列表／詳情含 `payment_status`；`GET /merchant/orders` 可選 `payment_status` 篩選。pay／cancel 見 `specs/005-payment-order-cancellation/contracts/http-api.yaml`。
 x-contract-metadata:
   sourceSpec: ../spec.md
   systemAnalysisPlan: ../plan.md
   uiPlan: ../ui-plan.md
   dataModel: ../data-model.dbml
   priorOrderApi: ../../003-order-creation-inquiry/contracts/http-api.yaml
+  paymentApiReference: ../../005-payment-order-cancellation/contracts/http-api.yaml
   authModel: 店家 X-Merchant-Token；顧客 guest session（003）。
   merchantTokenEnv: MERCHANT_TOKEN
   listMaxRows: 200
@@ -48,6 +51,11 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/OrderStatus'
+        - in: query
+          name: payment_status
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
       responses:
         '200':
           description: 訂單摘要列表
@@ -56,7 +64,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MerchantOrderListResponse'
         '400':
-          description: 無效 status 篩選
+          description: 無效 status 或 payment_status 篩選
           content:
             application/json:
               schema:
@@ -67,7 +75,12 @@ paths:
                     error:
                       code: INVALID_STATUS_FILTER
                       message: 無效的訂單狀態篩選。
-          x-errorCases: INVALID_STATUS_FILTER
+                invalidPaymentFilter:
+                  value:
+                    error:
+                      code: INVALID_PAYMENT_STATUS_FILTER
+                      message: 無效的付款狀態篩選。
+          x-errorCases: INVALID_STATUS_FILTER; INVALID_PAYMENT_STATUS_FILTER
         '401':
           $ref: '#/components/responses/MerchantUnauthorized'
         '503':
@@ -258,7 +271,7 @@ paths:
       description: |
         **需求追溯**：User Story 4；FR-014、FR-011；SC-004。
 
-        行為與 003 相同（session 綁定、404 語意）；`Order.status` 可為 `created|accepted|preparing|completed`，`status_label` 對應中文。
+        行為與 003 相同（session 綁定、404 語意）；`Order` 含出餐與付款欄位（與 003／005 對齊）。
       parameters:
         - in: path
           name: order_number
@@ -293,6 +306,16 @@ components:
         - accepted
         - preparing
         - completed
+        - cancelled
+
+    PaymentStatus:
+      type: string
+      enum:
+        - unpaid
+        - pending
+        - paid
+        - failed
+        - refunded
 
     MerchantOrderActionRequest:
       type: object
@@ -305,6 +328,8 @@ components:
         - order_number
         - status
         - status_label
+        - payment_status
+        - payment_status_label
         - created_at
         - total
       properties:
@@ -313,6 +338,10 @@ components:
         status:
           $ref: '#/components/schemas/OrderStatus'
         status_label:
+          type: string
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_status_label:
           type: string
         created_at:
           type: string
@@ -348,6 +377,8 @@ components:
         - order_number
         - status
         - status_label
+        - payment_status
+        - payment_status_label
         - created_at
         - total
         - items
@@ -358,6 +389,13 @@ components:
           $ref: '#/components/schemas/OrderStatus'
         status_label:
           type: string
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_status_label:
+          type: string
+        payment_failure_reason:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -365,6 +403,19 @@ components:
           type: string
           format: date-time
           nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        refunded_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: payment_status 為 refunded 時之模擬退款完成時間（005 FR-013）
         total:
           $ref: '#/components/schemas/MoneyAmount'
         items:
@@ -437,7 +488,7 @@ components:
               type: string
               description: |
                 店家：`MERCHANT_UNAUTHORIZED`（401）、`MERCHANT_NOT_CONFIGURED`（503）、
-                `INVALID_STATUS_FILTER`（400）、`ORDER_STATUS_CONFLICT`（409）。
+                `INVALID_STATUS_FILTER`（400）、`INVALID_PAYMENT_STATUS_FILTER`（400）、`ORDER_STATUS_CONFLICT`（409）。
                 共用：`ORDER_NOT_FOUND`（404）。
             message:
               type: string

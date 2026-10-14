@@ -19,6 +19,7 @@ function createEmptyState() {
     order_items: new Map(),
     order_item_options: [],
     order_idempotency_keys: new Map(),
+    payment_idempotency_keys: new Map(),
   };
 }
 
@@ -39,6 +40,43 @@ function cloneState(state) {
     order_items: cloneMapRecords(state.order_items),
     order_item_options: state.order_item_options.map((row) => ({ ...row })),
     order_idempotency_keys: cloneMapRecords(state.order_idempotency_keys),
+    payment_idempotency_keys: cloneMapRecords(state.payment_idempotency_keys),
+  };
+}
+
+const ORDER_HEADER_SELECT =
+  'id, guest_session_id, order_number, status, payment_status, total_amount, created_at, status_updated_at, payment_status_updated_at, payment_failure_reason, paid_at, cancelled_at, refunded_at, payment_failed_at';
+
+function defaultPaymentFields(ts) {
+  return {
+    payment_status: 'unpaid',
+    payment_status_updated_at: ts,
+    payment_failure_reason: null,
+    paid_at: null,
+    cancelled_at: null,
+    refunded_at: null,
+    payment_failed_at: null,
+  };
+}
+
+function findOrderByNumber(state, orderNumber) {
+  return [...state.orders.values()].find((entry) => entry.order_number === orderNumber);
+}
+
+function findOrderByNumberAndSession(state, orderNumber, sessionId) {
+  return [...state.orders.values()].find(
+    (entry) => entry.order_number === orderNumber && entry.guest_session_id === sessionId
+  );
+}
+
+function mapMerchantListRow(entry) {
+  return {
+    order_number: entry.order_number,
+    status: entry.status,
+    payment_status: entry.payment_status ?? 'unpaid',
+    total_amount: entry.total_amount,
+    created_at: entry.created_at,
+    status_updated_at: entry.status_updated_at ?? entry.created_at,
   };
 }
 
@@ -65,6 +103,10 @@ function executeQuery(state, text, params = []) {
     state.guest_sessions.clear();
     return { rows: [], rowCount: 0 };
   }
+  if (sql === 'DELETE FROM payment_idempotency_keys') {
+    state.payment_idempotency_keys.clear();
+    return { rows: [], rowCount: 0 };
+  }
   if (sql === 'DELETE FROM order_idempotency_keys') {
     state.order_idempotency_keys.clear();
     return { rows: [], rowCount: 0 };
@@ -84,6 +126,23 @@ function executeQuery(state, text, params = []) {
 
   if (sql === 'SELECT COUNT(*) AS count FROM guest_sessions') {
     return { rows: [{ count: state.guest_sessions.size }], rowCount: 1 };
+  }
+
+  if (sql === 'SELECT COUNT(*) AS count FROM payment_idempotency_keys') {
+    return { rows: [{ count: state.payment_idempotency_keys.size }], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'UPDATE orders SET payment_status = $3, payment_status_updated_at = $4 WHERE order_number = $1 AND guest_session_id = $2'
+  ) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    if (!row) {
+      return { rows: [], rowCount: 0 };
+    }
+    row.payment_status = params[2];
+    row.payment_status_updated_at = params[3];
+    return { rows: [], rowCount: 1 };
   }
 
   if (sql === 'SELECT COUNT(*) AS count FROM carts') {
@@ -386,7 +445,7 @@ function executeQuery(state, text, params = []) {
 
   if (
     sql
-    === 'INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at) VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME(), SYSUTCDATETIME())'
+    === 'INSERT INTO orders (id, guest_session_id, order_number, status, payment_status, total_amount, created_at, status_updated_at, payment_status_updated_at) VALUES ($1, $2, $3, $4, $5, $6, SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME())'
   ) {
     const duplicate = [...state.orders.values()].some((entry) => entry.order_number === params[2]);
     if (duplicate) {
@@ -400,9 +459,12 @@ function executeQuery(state, text, params = []) {
       guest_session_id: params[1],
       order_number: params[2],
       status: params[3],
-      total_amount: params[4],
+      total_amount: params[5],
       created_at: ts,
       status_updated_at: ts,
+      ...defaultPaymentFields(ts),
+      payment_status: params[4],
+      payment_status_updated_at: ts,
     });
     return { rows: [], rowCount: 1 };
   }
@@ -422,34 +484,47 @@ function executeQuery(state, text, params = []) {
 
   if (
     sql
-    === 'SELECT order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE status = $1 ORDER BY created_at DESC'
+    === 'SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at FROM orders WHERE status = $1 AND payment_status = $2 ORDER BY created_at DESC'
   ) {
     const rows = [...state.orders.values()]
-      .filter((entry) => entry.status === params[0])
+      .filter(
+        (entry) =>
+          entry.status === params[0] && (entry.payment_status ?? 'unpaid') === params[1]
+      )
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((entry) => ({
-        order_number: entry.order_number,
-        status: entry.status,
-        total_amount: entry.total_amount,
-        created_at: entry.created_at,
-        status_updated_at: entry.status_updated_at ?? entry.created_at,
-      }));
+      .map(mapMerchantListRow);
     return { rows, rowCount: rows.length };
   }
 
   if (
     sql
-    === 'SELECT order_number, status, total_amount, created_at, status_updated_at FROM orders ORDER BY created_at DESC'
+    === 'SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at FROM orders WHERE status = $1 ORDER BY created_at DESC'
+  ) {
+    const rows = [...state.orders.values()]
+      .filter((entry) => entry.status === params[0])
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(mapMerchantListRow);
+    return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql
+    === 'SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at FROM orders WHERE payment_status = $1 ORDER BY created_at DESC'
+  ) {
+    const rows = [...state.orders.values()]
+      .filter((entry) => (entry.payment_status ?? 'unpaid') === params[0])
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(mapMerchantListRow);
+    return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql
+    === 'SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at FROM orders ORDER BY created_at DESC'
   ) {
     const rows = [...state.orders.values()]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((entry) => ({
-        order_number: entry.order_number,
-        status: entry.status,
-        total_amount: entry.total_amount,
-        created_at: entry.created_at,
-        status_updated_at: entry.status_updated_at ?? entry.created_at,
-      }));
+      .map(mapMerchantListRow);
     return { rows, rowCount: rows.length };
   }
 
@@ -520,30 +595,24 @@ function executeQuery(state, text, params = []) {
     return { rows: [], rowCount: removed };
   }
 
-  if (
-    sql
-    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE id = $1'
-  ) {
+  if (sql === `SELECT ${ORDER_HEADER_SELECT} FROM orders WHERE id = $1`) {
     const row = state.orders.get(params[0]);
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
   }
 
-  if (
-    sql
-    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE order_number = $1'
-  ) {
-    const row = [...state.orders.values()].find((entry) => entry.order_number === params[0]);
+  if (sql === `SELECT ${ORDER_HEADER_SELECT} FROM orders WHERE order_number = $1`) {
+    const row = findOrderByNumber(state, params[0]);
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
   }
 
-  if (
-    sql
-    === 'SELECT id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at FROM orders WHERE order_number = $1 AND guest_session_id = $2'
-  ) {
-    const row = [...state.orders.values()].find(
-      (entry) => entry.order_number === params[0] && entry.guest_session_id === params[1]
-    );
+  if (sql === `SELECT ${ORDER_HEADER_SELECT} FROM orders WHERE order_number = $1 AND guest_session_id = $2`) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
+  }
+
+  if (sql === 'SELECT id FROM orders WHERE order_number = $1 AND guest_session_id = $2') {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    return { rows: row ? [{ id: row.id }] : [], rowCount: row ? 1 : 0 };
   }
 
   if (
@@ -591,6 +660,106 @@ function executeQuery(state, text, params = []) {
       }
     }
     return { rows, rowCount: rows.length };
+  }
+
+  if (
+    sql
+    === 'SELECT order_id FROM payment_idempotency_keys WHERE guest_session_id = $1 AND idempotency_key = $2 AND expires_at > SYSUTCDATETIME()'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const row = state.payment_idempotency_keys.get(mapKey);
+    if (!row || Date.parse(row.expires_at) <= Date.now()) {
+      return { rows: [], rowCount: 0 };
+    }
+    return { rows: [{ order_id: row.order_id }], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'INSERT INTO payment_idempotency_keys (guest_session_id, idempotency_key, order_id, result_payment_status, created_at, expires_at) VALUES ($1, $2, $3, $4, SYSUTCDATETIME(), $5)'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const existing = state.payment_idempotency_keys.get(mapKey);
+    if (existing) {
+      if (existing.order_id !== params[2]) {
+        const error = new Error('Duplicate idempotency key for different order');
+        error.code = 'DUPLICATE_IDEMPOTENCY_KEY';
+        throw error;
+      }
+      return { rows: [], rowCount: 0 };
+    }
+    state.payment_idempotency_keys.set(mapKey, {
+      guest_session_id: params[0],
+      idempotency_key: params[1],
+      order_id: params[2],
+      result_payment_status: params[3],
+      created_at: nowIso(),
+      expires_at: params[4],
+    });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (sql.startsWith("UPDATE orders SET payment_status = 'pending'")) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    if (!row || row.status === 'cancelled') {
+      return { rows: [], rowCount: 0 };
+    }
+    const ps = row.payment_status ?? 'unpaid';
+    if (!['unpaid', 'failed', 'pending'].includes(ps)) {
+      return { rows: [], rowCount: 0 };
+    }
+    const ts = nowIso();
+    row.payment_status = 'pending';
+    row.payment_status_updated_at = ts;
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (sql.startsWith("UPDATE orders SET payment_status = 'failed'")) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    if (!row) {
+      return { rows: [], rowCount: 0 };
+    }
+    const ts = nowIso();
+    row.payment_status = 'failed';
+    row.payment_status_updated_at = ts;
+    row.payment_failed_at = ts;
+    row.payment_failure_reason = params[2];
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (sql.startsWith("UPDATE orders SET payment_status = 'paid'")) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    if (!row) {
+      return { rows: [], rowCount: 0 };
+    }
+    const ts = nowIso();
+    row.payment_status = 'paid';
+    row.payment_status_updated_at = ts;
+    row.paid_at = ts;
+    row.payment_failure_reason = null;
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (sql.startsWith("UPDATE orders SET status = 'cancelled'")) {
+    const row = findOrderByNumberAndSession(state, params[0], params[1]);
+    if (!row || row.status !== 'created') {
+      return { rows: [], rowCount: 0 };
+    }
+    const ts = nowIso();
+    const ps = row.payment_status ?? 'unpaid';
+    row.status = 'cancelled';
+    row.cancelled_at = ts;
+    row.status_updated_at = ts;
+    row.payment_status_updated_at = ts;
+    if (ps === 'paid') {
+      row.payment_status = 'refunded';
+      row.refunded_at = ts;
+    } else if (ps === 'pending') {
+      row.payment_status = 'failed';
+      row.payment_failed_at = ts;
+      row.payment_failure_reason = params[2] ?? '付款逾時已中止';
+    }
+    return { rows: [], rowCount: 1 };
   }
 
   if (sql === 'DELETE FROM order_idempotency_keys WHERE expires_at <= $1') {

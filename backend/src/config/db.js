@@ -18,6 +18,9 @@ export function assertProductionDatabaseConfigured() {
       'MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USER, and MSSQL_PASSWORD are required when NODE_ENV=production'
     );
   }
+  if (process.env.NODE_ENV === 'production' && process.env.PAYMENT_TEST_ABORT_AFTER_PENDING === '1') {
+    throw new Error('PAYMENT_TEST_ABORT_AFTER_PENDING must not be enabled when NODE_ENV=production');
+  }
 }
 
 export async function ensureDatabaseReady() {

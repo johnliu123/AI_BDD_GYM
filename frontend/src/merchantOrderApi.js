@@ -30,8 +30,15 @@ export function createMerchantOrderApi(fetcher = fetch, { merchantToken } = {}) 
     return payload;
   }
 
-  async function listOrders({ status } = {}) {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  async function listOrders({ status, paymentStatus } = {}) {
+    const params = new URLSearchParams();
+    if (status) {
+      params.set('status', status);
+    }
+    if (paymentStatus) {
+      params.set('payment_status', paymentStatus);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
     const response = await fetcher(`/api/merchant/orders${query}`, {
       method: 'GET',
       headers: headers(),

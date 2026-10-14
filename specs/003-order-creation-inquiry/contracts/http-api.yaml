@@ -3,7 +3,9 @@ info:
   title: 訂單建立與查詢 HTTP API
   version: 0.1.0
   description: |
-    在第二迭代購物車之上，提供匿名訪客由目前工作階段購物車建立訂單及查詢訂單的 REST JSON 契約；不含付款、取消。店家出餐 API 見 `specs/004-merchant-serving-workflow/contracts/http-api.yaml`。
+    在第二迭代購物車之上，提供匿名訪客由目前工作階段購物車建立訂單及查詢訂單的 REST JSON 契約。付款／取消見 `specs/005-payment-order-cancellation/contracts/http-api.yaml`；店家出餐 API 見 `specs/004-merchant-serving-workflow/contracts/http-api.yaml`。
+
+    **`Order` 欄位（005 對齊）**：`getOrder` 回應含 `payment_status`／`payment_status_label`；`status` 可含 `cancelled`（005）。
 
     **整合**：訂單建立須先 `GET /api/cart` 取得 `csrf_token`；`POST /api/orders` 須帶 `X-CSRF-Token` 與精確 `Origin`（同 002 cart 寫入政策）。Session 僅能透過 HttpOnly `guest_session` cookie。
 
@@ -19,6 +21,7 @@ x-contract-metadata:
   authModel: 無登入；訂單歸屬與查詢限建立訂單之同一 guest session。
   idempotencyPolicy: 預設 TTL 86400s；僅成功 201/200 持久化映射；4xx/5xx 未建單不寫入（spec 澄清 Q12–Q13）。
   createOrderBodyPolicy: CreateOrderRequest 不允許額外欄位；不接受客戶端權威金額。
+  paymentApiReference: ../../005-payment-order-cancellation/contracts/http-api.yaml
 servers:
   - url: http://localhost:3000/api
     description: 本機 Express（PORT 可覆寫）
@@ -121,7 +124,7 @@ paths:
       description: |
         **需求追溯**：User Story 2；FR-008、FR-009、FR-010、FR-011；SC-005。
 
-        以 path `order_number` 與 cookie 解析之 guest_session_id 同時匹配；否則 404 ORDER_NOT_FOUND（不洩漏他 session 訂單是否存在）。回傳持久化快照金額，不以最新菜單重算。`Order.status` 自第四迭代起可為 `created|accepted|preparing|completed`（與 004 對齊）。
+        以 path `order_number` 與 cookie 解析之 guest_session_id 同時匹配；否則 404 ORDER_NOT_FOUND（不洩漏他 session 訂單是否存在）。回傳持久化快照金額，不以最新菜單重算。`Order.status` 可為 `created|accepted|preparing|completed|cancelled`；含 `payment_status` 等欄位（與 004／005 對齊）。
       parameters:
         - in: path
           name: order_number
@@ -169,6 +172,16 @@ components:
         - accepted
         - preparing
         - completed
+        - cancelled
+
+    PaymentStatus:
+      type: string
+      enum:
+        - unpaid
+        - pending
+        - paid
+        - failed
+        - refunded
 
     CreateOrderRequest:
       type: object
@@ -189,6 +202,8 @@ components:
         - order_number
         - status
         - status_label
+        - payment_status
+        - payment_status_label
         - created_at
         - total
         - items
@@ -199,8 +214,15 @@ components:
           $ref: '#/components/schemas/OrderStatus'
         status_label:
           type: string
-          description: 對應 status 之中文標籤（已建立／已接單／出餐中／已完成）
+          description: 對應 status 之中文標籤（含已取消，005）
           example: 已建立
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatus'
+        payment_status_label:
+          type: string
+        payment_failure_reason:
+          type: string
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -208,6 +230,19 @@ components:
           type: string
           format: date-time
           nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+        refunded_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: payment_status 為 refunded 時之模擬退款完成時間（005 FR-013）
         total:
           $ref: '#/components/schemas/MoneyAmount'
         items:

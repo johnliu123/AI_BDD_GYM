@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>木禾食堂｜付款與取消</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand"><span class="mark">木</span><strong>木禾食堂</strong> <small>付款／取消</small></div>
+        <label class="token-field">X-Merchant-Token
+          <input id="merchant-token" type="password" placeholder="demo-token" autocomplete="off" />
+        </label>
+      </header>
+
+      <main class="layout">
+        <section class="panel" aria-label="店家看板">
+          <div class="panel-head">
+            <h1>訂單佇列</h1>
+            <div class="filters">
+              <select id="status-filter" aria-label="出餐狀態">
+                <option value="">全部出餐</option>
+                <option value="created">已建立</option>
+                <option value="cancelled">已取消</option>
+                <option value="accepted">已接單</option>
+              </select>
+              <select id="payment-filter" aria-label="付款狀態">
+                <option value="">全部付款</option>
+                <option value="unpaid">未付款</option>
+                <option value="paid">已付款</option>
+                <option value="failed">付款失敗</option>
+              </select>
+            </div>
+          </div>
+          <p id="auth-message" class="auth-message hidden"></p>
+          <ul id="order-list" class="order-list"></ul>
+        </section>
+
+        <section class="panel detail" aria-label="店家詳情">
+          <h2 id="detail-title">選擇一筆訂單</h2>
+          <div id="detail-body" class="detail-body muted">點選左側訂單以檢視付款與出餐狀態。</div>
+          <div id="detail-actions" class="detail-actions hidden"></div>
+        </section>
+
+        <section class="panel customer" aria-label="顧客付款與查詢">
+          <h2>顧客：查詢／付款／取消</h2>
+          <div class="lookup-row">
+            <input id="lookup-number" type="text" placeholder="ORD-YYYYMMDD-XXXXXXXX" />
+            <button type="button" id="lookup-btn">查詢</button>
+          </div>
+          <label class="simulate"><input type="checkbox" id="simulate-fail" /> 下次付款模擬失敗</label>
+          <div id="lookup-result" class="lookup-result muted">輸入編號查詢訂單。</div>
+          <div id="customer-actions" class="detail-actions hidden"></div>
+        </section>
+      </main>
+      <div id="toast" class="toast hidden" role="status"></div>
+    </div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

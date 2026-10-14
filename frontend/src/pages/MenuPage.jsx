@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cartApi } from '../cartApi.js';
 import { orderApi } from '../orderApi.js';
 import { buildAddToCartPayload, loadMenuData } from '../menuApi.js';
@@ -6,6 +6,8 @@ import MealOptionsDialog from '../components/MealOptionsDialog.jsx';
 import CartPage from './CartPage.jsx';
 import OrderLookupPage from './OrderLookupPage.jsx';
 import MerchantOrdersPage from './MerchantOrdersPage.jsx';
+import OrderPaymentActions from '../components/OrderPaymentActions.jsx';
+import { paymentActionErrorMessage } from '../orderPaymentUi.js';
 import { resolveMerchantToken } from '../merchantOrderApi.js';
 
 const emptyState = {
@@ -41,15 +43,40 @@ export default function MenuPage() {
   const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [lookupResult, setLookupResult] = useState(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [simulatePayFailure, setSimulatePayFailure] = useState(false);
+  const [paymentToast, setPaymentToast] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedOptions, setSelectedOptions] = useState({});
   const mountedRef = useRef(true);
+  const paymentToastTimerRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (paymentToastTimerRef.current) {
+        clearTimeout(paymentToastTimerRef.current);
+        paymentToastTimerRef.current = null;
+      }
     };
+  }, []);
+
+  const showPaymentToast = useCallback((message) => {
+    if (paymentToastTimerRef.current) {
+      clearTimeout(paymentToastTimerRef.current);
+    }
+    if (!mountedRef.current) {
+      return;
+    }
+    setPaymentToast(message);
+    paymentToastTimerRef.current = setTimeout(() => {
+      paymentToastTimerRef.current = null;
+      if (mountedRef.current) {
+        setPaymentToast('');
+      }
+    }, 2200);
   }, []);
 
   useEffect(() => {
@@ -230,6 +257,55 @@ export default function MenuPage() {
     }
   };
 
+  const syncOrderViews = (order) => {
+    if (orderResult?.order_number === order.order_number) {
+      setOrderResult(order);
+    }
+    if (lookupResult?.order_number === order.order_number) {
+      setLookupResult(order);
+    }
+  };
+
+  const payForOrder = async (orderNumber) => {
+    setPaymentBusy(true);
+    setPaymentError('');
+    try {
+      const body =
+        import.meta.env.DEV && simulatePayFailure ? { simulate_outcome: 'failure' } : {};
+      const response = await orderApi.payOrder(orderNumber, { body });
+      syncOrderViews(response.order);
+    } catch (error) {
+      if (mountedRef.current) {
+        const message = paymentActionErrorMessage(error);
+        setPaymentError(message);
+        showPaymentToast(message);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setPaymentBusy(false);
+      }
+    }
+  };
+
+  const cancelForOrder = async (orderNumber) => {
+    setPaymentBusy(true);
+    setPaymentError('');
+    try {
+      const response = await orderApi.cancelOrder(orderNumber);
+      syncOrderViews(response.order);
+    } catch (error) {
+      if (mountedRef.current) {
+        const message = paymentActionErrorMessage(error);
+        setPaymentError(message);
+        showPaymentToast(message);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setPaymentBusy(false);
+      }
+    }
+  };
+
   const lookupOrder = async (orderNumber) => {
     setLookupBusy(true);
     setLookupError('');
@@ -364,8 +440,17 @@ export default function MenuPage() {
         <section className="order-result" aria-label="訂單建立成功">
           <h2>訂單已建立</h2>
           <p>訂單編號：<strong>{orderResult.order_number}</strong></p>
-          <p>狀態：{orderResult.status_label}</p>
+          <p>出餐狀態：{orderResult.status_label}</p>
           <p>總金額：NT$ {orderResult.total}</p>
+          <OrderPaymentActions
+            order={orderResult}
+            busy={paymentBusy || orderBusy}
+            actionError={paymentError}
+            onPay={() => payForOrder(orderResult.order_number)}
+            onCancel={() => cancelForOrder(orderResult.order_number)}
+            simulateFailure={simulatePayFailure}
+            onSimulateFailureChange={setSimulatePayFailure}
+          />
           <ul>
             {orderResult.items.map((item) => (
               <li key={`${item.menu_item_id}-${item.menu_item_name}`}>
@@ -384,7 +469,19 @@ export default function MenuPage() {
           lookupResult={lookupResult}
           onLookup={lookupOrder}
           onRefresh={lookupOrder}
+          paymentBusy={paymentBusy}
+          paymentError={paymentError}
+          onPay={payForOrder}
+          onCancel={cancelForOrder}
+          simulatePayFailure={simulatePayFailure}
+          onSimulatePayFailureChange={setSimulatePayFailure}
         />
+      )}
+
+      {paymentToast && (
+        <p className="menu-page__payment-toast" role="status">
+          {paymentToast}
+        </p>
       )}
 
       {selectedItem && (

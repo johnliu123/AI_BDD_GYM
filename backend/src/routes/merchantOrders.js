@@ -17,8 +17,7 @@ router.use('/api/merchant/orders', requireMerchantAuth);
 
 router.get('/api/merchant/orders', async (req, res) => {
   try {
-    const status = req.query.status;
-    const payload = await listMerchantOrders(status);
+    const payload = await listMerchantOrders(req.query.status, req.query.payment_status);
     res.json(payload);
   } catch (error) {
     const { status, body } = toClientErrorPayload(error, '無法載入訂單列表。');

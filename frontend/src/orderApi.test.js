@@ -68,3 +68,48 @@ test('getOrder maps path and surfaces 404 errors', async () => {
   assert.equal(calls[0].url, '/api/orders/ORD-20260101-00000000');
   assert.equal(calls[0].options.credentials, 'include');
 });
+
+test('payOrder posts to pay path with CSRF', async () => {
+  const calls = [];
+  const fetcher = async (url, options) => {
+    calls.push({ url, options });
+    if (url === '/api/cart') {
+      return jsonResponse({ cart: { items: [], total: '0.00' }, csrf_token: 'csrf-pay' });
+    }
+    return jsonResponse({
+      order: {
+        order_number: 'ORD-20261014-AABB0001',
+        status: 'created',
+        payment_status: 'paid',
+        total: '100.00',
+        items: [],
+      },
+    });
+  };
+
+  const api = createOrderApi(fetcher, createCartApi(fetcher));
+  await api.payOrder('ORD-20261014-AABB0001', { idempotencyKey: 'pay-key-1' });
+  const payCall = calls.find((entry) => entry.url.endsWith('/pay'));
+  assert.equal(payCall.options.method, 'POST');
+  assert.equal(payCall.options.headers['X-CSRF-Token'], 'csrf-pay');
+  assert.equal(payCall.options.headers['Idempotency-Key'], 'pay-key-1');
+});
+
+test('cancelOrder posts to cancel path with CSRF', async () => {
+  const calls = [];
+  const fetcher = async (url, options) => {
+    calls.push({ url, options });
+    if (url === '/api/cart') {
+      return jsonResponse({ cart: { items: [], total: '0.00' }, csrf_token: 'csrf-cancel' });
+    }
+    return jsonResponse({
+      order: { order_number: 'ORD-1', status: 'cancelled', payment_status: 'unpaid', total: '0.00', items: [] },
+    });
+  };
+
+  const api = createOrderApi(fetcher, createCartApi(fetcher));
+  await api.cancelOrder('ORD-1');
+  const cancelCall = calls.find((entry) => entry.url.endsWith('/cancel'));
+  assert.equal(cancelCall.options.method, 'POST');
+  assert.equal(cancelCall.options.headers['X-CSRF-Token'], 'csrf-cancel');
+});

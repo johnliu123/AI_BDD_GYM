@@ -1,10 +1,11 @@
-export const ORDER_STATUSES = ['created', 'accepted', 'preparing', 'completed'];
+export const ORDER_STATUSES = ['created', 'accepted', 'preparing', 'completed', 'cancelled'];
 
 const STATUS_LABELS = {
   created: '已建立',
   accepted: '已接單',
   preparing: '出餐中',
   completed: '已完成',
+  cancelled: '已取消',
 };
 
 const TRANSITIONS = {

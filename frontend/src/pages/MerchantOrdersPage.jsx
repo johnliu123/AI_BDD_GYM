@@ -7,10 +7,20 @@ const STATUS_OPTIONS = [
   { value: 'accepted', label: '已接單' },
   { value: 'preparing', label: '出餐中' },
   { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' },
+];
+
+const PAYMENT_OPTIONS = [
+  { value: '', label: '全部付款' },
+  { value: 'unpaid', label: '未付款' },
+  { value: 'paid', label: '已付款' },
+  { value: 'failed', label: '付款失敗' },
+  { value: 'refunded', label: '已退款' },
 ];
 
 export default function MerchantOrdersPage({ merchantToken }) {
   const [statusFilter, setStatusFilter] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
   const [orders, setOrders] = useState([]);
   const [selectedNumber, setSelectedNumber] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -62,7 +72,10 @@ export default function MerchantOrdersPage({ merchantToken }) {
     setBusy(true);
     setListError('');
     try {
-      const payload = await api.listOrders({ status: statusFilter || undefined });
+      const payload = await api.listOrders({
+        status: statusFilter || undefined,
+        paymentStatus: paymentFilter || undefined,
+      });
       if (!mountedRef.current || generation !== listGenerationRef.current) {
         return;
       }
@@ -82,7 +95,7 @@ export default function MerchantOrdersPage({ merchantToken }) {
         setBusy(false);
       }
     }
-  }, [api, statusFilter]);
+  }, [api, statusFilter, paymentFilter]);
 
   const loadDetail = useCallback(
     async (orderNumber) => {
@@ -183,6 +196,25 @@ export default function MerchantOrdersPage({ merchantToken }) {
             ))}
           </select>
         </label>
+        <label className="merchant-board__filter">
+          付款篩選
+          <select
+            value={paymentFilter}
+            disabled={busy}
+            onChange={(event) => {
+              setPaymentFilter(event.target.value);
+              setSelectedNumber(null);
+              setDetail(null);
+              detailTargetRef.current = null;
+            }}
+          >
+            {PAYMENT_OPTIONS.map((option) => (
+              <option key={option.value || 'all-pay'} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" className="action-button" disabled={busy} onClick={loadList}>
           重新整理
         </button>
@@ -205,6 +237,7 @@ export default function MerchantOrdersPage({ merchantToken }) {
               >
                 <span>{order.order_number}</span>
                 <span>{order.status_label}</span>
+                <span>{order.payment_status_label ?? order.payment_status}</span>
                 <span>NT$ {order.total}</span>
               </button>
             </li>
@@ -223,8 +256,14 @@ export default function MerchantOrdersPage({ merchantToken }) {
             <>
               <h3>{detail.order_number}</h3>
               <p>
-                狀態：{detail.status_label}（{detail.status}）
+                出餐狀態：{detail.status_label}（{detail.status}）
               </p>
+              <p>
+                付款狀態：{detail.payment_status_label ?? detail.payment_status}
+              </p>
+              {detail.payment_failure_reason && (
+                <p>付款失敗：{detail.payment_failure_reason}</p>
+              )}
               <p>總金額：NT$ {detail.total}</p>
               <ul>
                 {detail.items.map((item) => (
@@ -233,23 +272,30 @@ export default function MerchantOrdersPage({ merchantToken }) {
                   </li>
                 ))}
               </ul>
-              <div className="merchant-board__actions">
-                {detail.status === 'created' && (
-                  <button type="button" className="action-button" disabled={busy} onClick={() => runAction('accept')}>
-                    接單
-                  </button>
-                )}
-                {detail.status === 'accepted' && (
-                  <button type="button" className="action-button" disabled={busy} onClick={() => runAction('preparing')}>
-                    開始出餐
-                  </button>
-                )}
-                {detail.status === 'preparing' && (
-                  <button type="button" className="action-button" disabled={busy} onClick={() => runAction('complete')}>
-                    完成訂單
-                  </button>
-                )}
-              </div>
+              {detail.status !== 'cancelled' && (
+                <div className="merchant-board__actions">
+                  {detail.status === 'created' && (
+                    <button type="button" className="action-button" disabled={busy} onClick={() => runAction('accept')}>
+                      接單
+                    </button>
+                  )}
+                  {detail.status === 'accepted' && (
+                    <button type="button" className="action-button" disabled={busy} onClick={() => runAction('preparing')}>
+                      開始出餐
+                    </button>
+                  )}
+                  {detail.status === 'preparing' && (
+                    <button type="button" className="action-button" disabled={busy} onClick={() => runAction('complete')}>
+                      完成訂單
+                    </button>
+                  )}
+                </div>
+              )}
+              {detail.status === 'cancelled' && (
+                <p className="merchant-board__hint" role="status">
+                  此訂單已取消，無法接單或推進出餐。
+                </p>
+              )}
             </>
           )}
         </article>

@@ -1,0 +1,126 @@
+// 資料模型：點餐系統第五迭代－付款與取消訂單
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: 擴充 003/004 orders 與新增 payment 冪等表；不含 HTTP、UI、migrations。
+// @coveredEndpoints: Microsoft SQL Server
+
+Project payment_order_cancellation {
+  database_type: 'Microsoft SQL Server'
+  Note: '''
+本模型在第四迭代出餐狀態之上新增付款維度與 cancelled 出餐終態。明細與 total_amount 仍為建立快照；付款與取消不得 UPDATE order_items 或 total_amount（BR-001、FR-010）。
+
+出餐狀態機（004 序列 + 取消）：
+  created → accepted → preparing → completed
+  created → cancelled（僅顧客取消）
+
+付款狀態機（正交）：
+  unpaid → pending → paid | failed
+  paid → refunded（僅與 cancelled 同一交易，顧客取消已付款訂單）
+
+pay 應用層（單一 transaction）：
+  1) 驗證 session、非 cancelled、payment_status ∈ {unpaid, failed} 或 stale pending
+  2) UPDATE payment_status = pending WHERE …
+  3) 呼叫 stub → paid 或 failed
+  4) 若 paid 且帶 Idempotency-Key → INSERT payment_idempotency_keys
+
+cancel 應用層：
+  僅 status = created；payment_status = pending → 應用層拒絕（不寫 DB）
+  paid → 同交易 status=cancelled, payment_status=refunded
+  unpaid|failed → status=cancelled
+
+merchant 接單／出餐：若 status = cancelled → 409（FR-019）
+
+=== 供 API Plan ===
+- POST /orders/{order_number}/pay、/cancel
+- GET order、merchant list/detail 回傳 payment_* 欄位
+  '''
+}
+
+Table guest_sessions {
+  session_id varchar [pk]
+  Note: '003 邏輯投影；FR-011'
+}
+
+Table orders {
+  id uuid [pk]
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  order_number varchar(32) [not null, unique]
+  status varchar(32) [not null, note: 'created|accepted|preparing|completed|cancelled']
+  payment_status varchar(32) [not null, note: 'unpaid|pending|paid|failed|refunded']
+  total_amount numeric(10, 2) [not null, note: '建立快照；pay/cancel 不可 UPDATE']
+  created_at datetime2 [not null]
+  status_updated_at datetime2 [note: '004 出餐狀態更新時間']
+  payment_status_updated_at datetime2 [note: '最近一次 payment_status 變更']
+  paid_at datetime2 [note: 'payment_status 首次變 paid']
+  payment_failed_at datetime2 [note: '最近一次 failed']
+  payment_failure_reason nvarchar(500) [note: '對外可顯示摘要；nullable']
+  cancelled_at datetime2 [note: 'status 變 cancelled']
+  refunded_at datetime2 [note: 'payment_status 變 refunded']
+
+  indexes {
+    (status, created_at)
+    (payment_status, created_at)
+    (guest_session_id, created_at)
+  }
+
+  Note: '005 擴充 payment 與 cancelled。需求追溯 FR-001–FR-020、FR-010–FR-016、BR-001–BR-004、SC-001–SC-006'
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  menu_item_id uuid [not null]
+  menu_item_name nvarchar(200) [not null]
+  quantity int [not null]
+  unit_price numeric(10, 2) [not null]
+  line_total numeric(10, 2) [not null]
+
+  Note: '005 唯讀；FR-010、SC-005'
+}
+
+Table order_item_options {
+  order_item_id uuid [not null, ref: > order_items.id]
+  option_group_id uuid [not null]
+  option_group_name nvarchar(100) [not null]
+  menu_item_option_id uuid [not null]
+  option_name nvarchar(100) [not null]
+
+  indexes {
+    (order_item_id, option_group_id) [pk]
+  }
+
+  Note: '005 唯讀'
+}
+
+Table order_idempotency_keys {
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  idempotency_key varchar(128) [not null]
+  order_id uuid [not null, ref: > orders.id]
+  created_at datetime2 [not null]
+  expires_at datetime2 [not null]
+
+  indexes {
+    (guest_session_id, idempotency_key) [pk]
+    (expires_at)
+  }
+
+  Note: '003 建單冪等；005 不共用'
+}
+
+Table payment_idempotency_keys {
+  guest_session_id varchar [not null, ref: > guest_sessions.session_id]
+  idempotency_key varchar(128) [not null]
+  order_id uuid [not null, ref: > orders.id]
+  result_payment_status varchar(32) [not null, note: 'paid']
+  created_at datetime2 [not null]
+  expires_at datetime2 [not null]
+
+  indexes {
+    (guest_session_id, idempotency_key) [pk]
+    (expires_at)
+  }
+
+  Note: '005 付款冪等；僅 paid 成功寫入。需求追溯 FR-012、SC-006'
+}
+
+// Constitution self-check: pass

@@ -1,6 +1,19 @@
 import { useState } from 'react';
+import OrderPaymentActions from '../components/OrderPaymentActions.jsx';
 
-export default function OrderLookupPage({ lookupError, lookupBusy, lookupResult, onLookup, onRefresh }) {
+export default function OrderLookupPage({
+  lookupError,
+  lookupBusy,
+  lookupResult,
+  onLookup,
+  onRefresh,
+  paymentBusy = false,
+  paymentError = '',
+  onPay,
+  onCancel,
+  simulatePayFailure = false,
+  onSimulatePayFailureChange,
+}) {
   const [orderNumber, setOrderNumber] = useState('');
 
   const submit = (event) => {
@@ -28,8 +41,17 @@ export default function OrderLookupPage({ lookupError, lookupBusy, lookupResult,
       {lookupResult && (
         <article className="order-result">
           <h3>{lookupResult.order_number}</h3>
-          <p>狀態：{lookupResult.status_label}</p>
+          <p>出餐狀態：{lookupResult.status_label}</p>
           <p>總金額：NT$ {lookupResult.total}</p>
+          <OrderPaymentActions
+            order={lookupResult}
+            busy={paymentBusy || lookupBusy}
+            actionError={paymentError}
+            onPay={onPay ? () => onPay(lookupResult.order_number) : undefined}
+            onCancel={onCancel ? () => onCancel(lookupResult.order_number) : undefined}
+            simulateFailure={simulatePayFailure}
+            onSimulateFailureChange={onSimulatePayFailureChange}
+          />
           <ul>
             {lookupResult.items.map((item) => (
               <li key={`${item.menu_item_id}-${item.menu_item_name}`}>

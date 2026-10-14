@@ -9,6 +9,9 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test",
+    "smoke:005": "node scripts/smoke-005-payment.mjs",
+    "verify:migrations": "node scripts/verify-migrations.mjs",
+    "smoke:mssql:005": "node scripts/smoke-mssql-005.mjs",
     "audit:sca": "npm audit --audit-level=moderate --strict-ssl=false"
   },
   "dependencies": {

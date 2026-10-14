@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { getPool } from '../config/db.js';
 
 export function sessionCookieValue(response) {
   const raw = response.headers['set-cookie']?.[0] ?? '';
@@ -74,4 +75,37 @@ export function merchantGet(app, path, { token = MERCHANT_TEST_TOKEN, query } = 
 
 export function merchantPost(app, path, { token = MERCHANT_TEST_TOKEN, body = {} } = {}) {
   return request(app).post(path).set(merchantHeaders(token)).send(body);
+}
+
+export function postPayOrder(app, session, orderNumber, { body = {}, idempotencyKey } = {}) {
+  const headers = { ...session.headers };
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
+  }
+  return request(app)
+    .post(`/api/orders/${encodeURIComponent(orderNumber)}/pay`)
+    .set(headers)
+    .send(body);
+}
+
+export function postCancelOrder(app, session, orderNumber, body = {}) {
+  return request(app)
+    .post(`/api/orders/${encodeURIComponent(orderNumber)}/cancel`)
+    .set(session.headers)
+    .send(body);
+}
+
+/** Test-only: seed payment_status (memory DB + integration tests). */
+export async function forceOrderPaymentStatus(orderNumber, sessionId, paymentStatus, updatedAtIso) {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE orders SET payment_status = $3, payment_status_updated_at = $4 WHERE order_number = $1 AND guest_session_id = $2`,
+    [orderNumber, sessionId, paymentStatus, updatedAtIso]
+  );
+}
+
+export async function countPaymentIdempotencyKeys() {
+  const pool = getPool();
+  const result = await pool.query('SELECT COUNT(*) AS count FROM payment_idempotency_keys');
+  return Number(result.rows[0]?.count ?? 0);
 }

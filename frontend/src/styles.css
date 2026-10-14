@@ -449,7 +449,8 @@ button {
   margin-top: 12px;
 }
 
-.merchant-board__toast {
+.merchant-board__toast,
+.menu-page__payment-toast {
   margin-top: 12px;
   padding: 8px 12px;
   background: #fef3c7;

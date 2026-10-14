@@ -1,0 +1,76 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  memory-and-migrations:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: backend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run verify:migrations
+      - run: npm test
+        env:
+          USE_MEMORY_DB: '1'
+      - run: npm run smoke:005
+        env:
+          USE_MEMORY_DB: '1'
+          MERCHANT_TOKEN: test-merchant-token
+
+  mssql-migration-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-CU16-ubuntu-22.04
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: CI_Test_Passw0rd!
+        ports:
+          - 1433:1433
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      MSSQL_SERVER: localhost
+      MSSQL_PORT: 1433
+      MSSQL_DATABASE: AI_BDD_GYM_CI
+      MSSQL_USER: sa
+      MSSQL_PASSWORD: CI_Test_Passw0rd!
+      MSSQL_ENCRYPT: 'true'
+      MSSQL_TRUST_SERVER_CERTIFICATE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: backend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Wait for SQL Server
+        run: |
+          for i in $(seq 1 30); do
+            if node -e "import('mssql').then(m=>m.default.connect({server:process.env.MSSQL_SERVER,port:Number(process.env.MSSQL_PORT),user:process.env.MSSQL_USER,password:process.env.MSSQL_PASSWORD,database:'master',options:{encrypt:true,trustServerCertificate:true}}).then(p=>p.close()).then(()=>process.exit(0)).catch(()=>process.exit(1)))"; then
+              echo "SQL Server ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "SQL Server did not become ready"
+          exit 1
+      - run: npm run smoke:mssql:005

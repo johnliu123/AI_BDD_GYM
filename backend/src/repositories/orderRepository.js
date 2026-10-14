@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import { getPool } from '../config/db.js';
 import { statusLabelFor } from '../lib/orderStatus.js';
+import { paymentStatusLabelFor } from '../lib/paymentStatus.js';
 import { withTransaction } from './cartRepository.js';
 
 const ORDER_HEADER_SELECT =
-  'id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at';
+  'id, guest_session_id, order_number, status, payment_status, total_amount, created_at, status_updated_at, payment_status_updated_at, payment_failure_reason, paid_at, cancelled_at, refunded_at, payment_failed_at';
 
 export async function findIdempotencyOrderId(sessionId, idempotencyKey, client = getPool()) {
   const result = await client.query(
@@ -29,9 +30,9 @@ export async function insertIdempotencyKey(sessionId, idempotencyKey, orderId, e
 export async function insertOrderHeader(sessionId, orderNumber, totalAmount, client) {
   const orderId = crypto.randomUUID();
   await client.query(
-    `INSERT INTO orders (id, guest_session_id, order_number, status, total_amount, created_at, status_updated_at)
-     VALUES ($1, $2, $3, $4, $5, SYSUTCDATETIME(), SYSUTCDATETIME())`,
-    [orderId, sessionId, orderNumber, 'created', totalAmount]
+    `INSERT INTO orders (id, guest_session_id, order_number, status, payment_status, total_amount, created_at, status_updated_at, payment_status_updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME())`,
+    [orderId, sessionId, orderNumber, 'created', 'unpaid', totalAmount]
   );
   return orderId;
 }
@@ -168,46 +169,84 @@ async function assembleOrder(headerRow, client) {
     options: optionsByItemId.get(row.id) ?? [],
   }));
 
+  const paymentStatus = headerRow.payment_status ?? 'unpaid';
+
   return {
     order_number: headerRow.order_number,
     status: headerRow.status,
     status_label: statusLabelFor(headerRow.status),
+    payment_status: paymentStatus,
+    payment_status_label: paymentStatusLabelFor(paymentStatus),
+    payment_failure_reason: headerRow.payment_failure_reason ?? null,
     created_at: normalizeTimestamp(headerRow.created_at),
     status_updated_at: headerRow.status_updated_at
       ? normalizeTimestamp(headerRow.status_updated_at)
       : normalizeTimestamp(headerRow.created_at),
+    payment_status_updated_at: headerRow.payment_status_updated_at
+      ? normalizeTimestamp(headerRow.payment_status_updated_at)
+      : normalizeTimestamp(headerRow.created_at),
+    paid_at: headerRow.paid_at ? normalizeTimestamp(headerRow.paid_at) : null,
+    cancelled_at: headerRow.cancelled_at ? normalizeTimestamp(headerRow.cancelled_at) : null,
+    refunded_at: headerRow.refunded_at ? normalizeTimestamp(headerRow.refunded_at) : null,
     total: formatDecimal(headerRow.total_amount),
     items,
   };
 }
 
-export async function listOrdersForMerchant({ status = null, limit = 200 }, client = getPool()) {
-  const result = status
-    ? await client.query(
-        `SELECT order_number, status, total_amount, created_at, status_updated_at
-         FROM orders
-         WHERE status = $1
-         ORDER BY created_at DESC`,
-        [status]
-      )
-    : await client.query(
-        `SELECT order_number, status, total_amount, created_at, status_updated_at
-         FROM orders
-         ORDER BY created_at DESC`,
-        []
-      );
+export async function listOrdersForMerchant(
+  { status = null, paymentStatus = null, limit = 200 },
+  client = getPool()
+) {
+  let result;
+  if (status && paymentStatus) {
+    result = await client.query(
+      `SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at
+       FROM orders
+       WHERE status = $1 AND payment_status = $2
+       ORDER BY created_at DESC`,
+      [status, paymentStatus]
+    );
+  } else if (status) {
+    result = await client.query(
+      `SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at
+       FROM orders
+       WHERE status = $1
+       ORDER BY created_at DESC`,
+      [status]
+    );
+  } else if (paymentStatus) {
+    result = await client.query(
+      `SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at
+       FROM orders
+       WHERE payment_status = $1
+       ORDER BY created_at DESC`,
+      [paymentStatus]
+    );
+  } else {
+    result = await client.query(
+      `SELECT order_number, status, payment_status, total_amount, created_at, status_updated_at
+       FROM orders
+       ORDER BY created_at DESC`,
+      []
+    );
+  }
 
   const rows = result.rows.slice(0, limit);
-  return rows.map((row) => ({
-    order_number: row.order_number,
-    status: row.status,
-    status_label: statusLabelFor(row.status),
-    created_at: normalizeTimestamp(row.created_at),
-    status_updated_at: row.status_updated_at
-      ? normalizeTimestamp(row.status_updated_at)
-      : normalizeTimestamp(row.created_at),
-    total: formatDecimal(row.total_amount),
-  }));
+  return rows.map((row) => {
+    const ps = row.payment_status ?? 'unpaid';
+    return {
+      order_number: row.order_number,
+      status: row.status,
+      status_label: statusLabelFor(row.status),
+      payment_status: ps,
+      payment_status_label: paymentStatusLabelFor(ps),
+      created_at: normalizeTimestamp(row.created_at),
+      status_updated_at: row.status_updated_at
+        ? normalizeTimestamp(row.status_updated_at)
+        : normalizeTimestamp(row.created_at),
+      total: formatDecimal(row.total_amount),
+    };
+  });
 }
 
 export async function transitionOrderStatus(orderNumber, expectedStatus, nextStatus, client = getPool()) {
