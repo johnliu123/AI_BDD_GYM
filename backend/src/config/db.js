@@ -1,6 +1,8 @@
 import { createMemoryPool } from './memoryDatabase.js';
 import { isMssqlConfigured } from './mssqlConfig.js';
 import { runMigrations } from '../data/migrate.js';
+import { warnIfInvalidMerchantCredentialsJson } from './merchantCredentials.js';
+import { refreshMenuCatalog } from '../repositories/menuRepository.js';
 
 let pool;
 let initPromise;
@@ -27,6 +29,7 @@ export async function ensureDatabaseReady() {
   if (!initPromise) {
     initPromise = (async () => {
       assertProductionDatabaseConfigured();
+      warnIfInvalidMerchantCredentialsJson();
       if (!pool) {
         const useMemory = process.env.USE_MEMORY_DB === '1' || !isMssqlConfigured();
         if (useMemory) {
@@ -37,6 +40,7 @@ export async function ensureDatabaseReady() {
         }
       }
       await runMigrations(pool);
+      await refreshMenuCatalog(pool);
     })();
   }
   return initPromise;

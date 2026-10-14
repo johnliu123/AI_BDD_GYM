@@ -1,0 +1,642 @@
+openapi: 3.0.3
+info:
+  title: 進階功能與系統驗證 HTTP API
+  version: 0.1.0
+  description: |
+    第六迭代：店家菜單 CRUD、售完／停供、RBAC（`MERCHANT_CREDENTIALS`）、結構化 404。
+
+    **整合**：店家寫入 API 使用 **`X-Merchant-Token`**，需 **menu** 或 **admin** 角色；004/005 訂單 API 需 **orders** 或 **admin**。Legacy **`MERCHANT_TOKEN`** 視為 admin。
+
+    **顧客讀取**：`GET /categories`、`GET /menu-items` 仍公開（無 merchant token）。
+
+    **金額**：購物車／建單／付款仍僅伺服器計價（FR-012）；本契約 menu 寫入 body 不得含 cart/order 金額欄位。
+x-contract-metadata:
+  sourceSpec: ../spec.md
+  systemAnalysisPlan: ../plan.md
+  uiPlan: ../ui-plan.md
+  dataModel: ../data-model.dbml
+  priorMerchantApi: ../../004-merchant-serving-workflow/contracts/http-api.yaml
+  priorPaymentApi: ../../005-payment-order-cancellation/contracts/http-api.yaml
+  rbacEnv: MERCHANT_CREDENTIALS JSON array; MERCHANT_TOKEN legacy admin
+  categoryDeletePolicy: empty category only → else 409 CATEGORY_IN_USE
+servers:
+  - url: http://localhost:3000/api
+    description: 本機 Express
+security: []
+tags:
+  - name: MerchantMenu
+    description: 店家菜單維護（menu/admin 角色）
+  - name: PublicMenu
+    description: 顧客菜單讀取（既有）
+paths:
+  /categories:
+    get:
+      tags:
+        - PublicMenu
+      operationId: listCategories
+      summary: 列出餐點分類（顧客）
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+  /menu-items:
+    get:
+      tags:
+        - PublicMenu
+      operationId: listMenuItems
+      summary: 列出餐點（顧客）
+      parameters:
+        - in: query
+          name: category_id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidCategoryId'
+  /merchant/categories:
+    get:
+      tags:
+        - MerchantMenu
+      operationId: listMerchantCategories
+      summary: 列出分類（店家）
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '503':
+          $ref: '#/components/responses/MerchantNotConfigured'
+    post:
+      tags:
+        - MerchantMenu
+      operationId: createMerchantCategory
+      summary: 建立分類
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequestBody'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '409':
+          $ref: '#/components/responses/DuplicateCategoryName'
+  /merchant/categories/{category_id}:
+    patch:
+      tags:
+        - MerchantMenu
+      operationId: updateMerchantCategory
+      summary: 更新分類
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequestBody'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateCategoryName'
+    delete:
+      tags:
+        - MerchantMenu
+      operationId: deleteMerchantCategory
+      summary: 刪除空分類
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+        '409':
+          $ref: '#/components/responses/CategoryInUse'
+  /merchant/menu-items:
+    post:
+      tags:
+        - MerchantMenu
+      operationId: createMerchantMenuItem
+      summary: 建立餐點（含可選規格群組）
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMenuItemRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequestBody'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/CategoryNotFound'
+  /merchant/menu-items/{menu_item_id}:
+    patch:
+      tags:
+        - MerchantMenu
+      operationId: updateMerchantMenuItem
+      summary: 更新餐點（名稱、價格、分類、is_active）
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      parameters:
+        - $ref: '#/components/parameters/MenuItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMenuItemRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequestBody'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/MenuItemNotFound'
+  /merchant/menu-items/{menu_item_id}/availability:
+    patch:
+      tags:
+        - MerchantMenu
+      operationId: patchMenuItemAvailability
+      summary: 餐點售完／恢復供應
+      description: |
+        **需求追溯**：User Story 2；FR-004、FR-006；SC-002。
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      parameters:
+        - $ref: '#/components/parameters/MenuItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityPatchRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemResponse'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/MenuItemNotFound'
+  /merchant/menu-items/{menu_item_id}/options/{option_id}/availability:
+    patch:
+      tags:
+        - MerchantMenu
+      operationId: patchMenuOptionAvailability
+      summary: 規格選項停供／恢復
+      security:
+        - MerchantToken: []
+      x-required-roles:
+        - menu
+        - admin
+      parameters:
+        - $ref: '#/components/parameters/MenuItemId'
+        - in: path
+          name: option_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityPatchRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItemResponse'
+        '401':
+          $ref: '#/components/responses/MerchantUnauthorized'
+        '403':
+          $ref: '#/components/responses/MerchantForbidden'
+        '404':
+          $ref: '#/components/responses/MenuOptionNotFound'
+components:
+  securitySchemes:
+    MerchantToken:
+      type: apiKey
+      in: header
+      name: X-Merchant-Token
+  parameters:
+    CategoryId:
+      in: path
+      name: category_id
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MenuItemId:
+      in: path
+      name: menu_item_id
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    ErrorBody:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      additionalProperties: false
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sort_order:
+          type: integer
+          nullable: true
+    CategoryListResponse:
+      type: object
+      required:
+        - categories
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+    CategoryResponse:
+      type: object
+      required:
+        - category
+      properties:
+        category:
+          $ref: '#/components/schemas/Category'
+    MenuItem:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - category_id
+        - category_name
+        - is_active
+        - option_groups
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: string
+          description: 十進位字串
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+        image_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+    OptionGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        is_required:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuOption'
+    MenuOption:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price_adjustment:
+          type: string
+        is_active:
+          type: boolean
+    MenuItemListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+    MenuItemResponse:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: '#/components/schemas/MenuItem'
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        sort_order:
+          type: integer
+      additionalProperties: false
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        sort_order:
+          type: integer
+      additionalProperties: false
+    CreateMenuItemRequest:
+      type: object
+      required:
+        - name
+        - price
+        - category_id
+      properties:
+        name:
+          type: string
+        price:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        image_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroupInput'
+      additionalProperties: false
+    UpdateMenuItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        image_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        option_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroupInput'
+      additionalProperties: false
+    OptionGroupInput:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        is_required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              price_adjustment:
+                type: string
+              is_active:
+                type: boolean
+    AvailabilityPatchRequest:
+      type: object
+      required:
+        - is_active
+      properties:
+        is_active:
+          type: boolean
+      additionalProperties: false
+  responses:
+    InvalidRequestBody:
+      description: 請求 body 無效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            error:
+              code: INVALID_REQUEST_BODY
+              message: 請求格式不正確。
+    NotFound:
+      description: 未知路由或資源
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            error:
+              code: NOT_FOUND
+              message: 找不到請求的資源。
+    MerchantUnauthorized:
+      description: 店家憑證無效或缺失
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            error:
+              code: MERCHANT_UNAUTHORIZED
+              message: 店家憑證無效。
+    MerchantForbidden:
+      description: 憑證有效但角色不足（006 RBAC）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            error:
+              code: MERCHANT_FORBIDDEN
+              message: 此操作需要更高權限。
+    MerchantNotConfigured:
+      description: 未設定任何店家憑證
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    InvalidCategoryId:
+      description: 顧客 query category_id 不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    CategoryNotFound:
+      description: 分類不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    CategoryInUse:
+      description: 分類仍有餐點
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            error:
+              code: CATEGORY_IN_USE
+              message: 分類下仍有餐點，無法刪除。
+    DuplicateCategoryName:
+      description: 分類名稱重複
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    MenuItemNotFound:
+      description: 餐點不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    MenuOptionNotFound:
+      description: 規格選項不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'

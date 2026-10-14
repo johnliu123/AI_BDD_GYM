@@ -22,8 +22,13 @@ export function createMerchantOrderApi(fetcher = fetch, { merchantToken } = {}) 
   async function parseResponse(response) {
     const payload = await response.json();
     if (!response.ok) {
-      const error = new Error(payload.error?.message || 'MERCHANT_REQUEST_FAILED');
-      error.code = payload.error?.code || 'MERCHANT_REQUEST_FAILED';
+      const code = payload.error?.code || 'MERCHANT_REQUEST_FAILED';
+      const message =
+        code === 'MERCHANT_FORBIDDEN'
+          ? '此操作需要更高權限，請使用具 orders 或 admin 角色的店家憑證。'
+          : payload.error?.message || 'MERCHANT_REQUEST_FAILED';
+      const error = new Error(message);
+      error.code = code;
       error.status = response.status;
       throw error;
     }

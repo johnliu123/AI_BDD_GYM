@@ -16,6 +16,15 @@ const CLIENT_MESSAGES = {
   MERCHANT_NOT_CONFIGURED: '店家功能尚未設定。',
   INVALID_STATUS_FILTER: '無效的訂單狀態篩選。',
   ORDER_STATUS_CONFLICT: '訂單狀態已變更，請重新整理後再試。',
+  MERCHANT_FORBIDDEN: '此操作需要更高權限。',
+  NOT_FOUND: '找不到請求的資源。',
+  INVALID_REQUEST_BODY: '請求格式不正確。',
+  CATEGORY_NOT_FOUND: '找不到分類。',
+  CATEGORY_IN_USE: '分類下仍有餐點，無法刪除。',
+  DUPLICATE_CATEGORY_NAME: '分類名稱已存在。',
+  MENU_ITEM_NOT_FOUND: '找不到餐點。',
+  MENU_OPTION_NOT_FOUND: '找不到規格選項。',
+  INVALID_CATEGORY_ID: '未找到指定分類。',
 };
 
 export function toClientErrorPayload(error, fallbackMessage = '請求無法完成。') {
@@ -39,7 +48,7 @@ export function toClientErrorPayload(error, fallbackMessage = '請求無法完�
     body: {
       error: {
         code,
-        message: CLIENT_MESSAGES[code] || fallbackMessage,
+        message: error?.exposedMessage || CLIENT_MESSAGES[code] || fallbackMessage,
       },
     },
   };

@@ -1,0 +1,98 @@
+// 資料模型：第六迭代－菜單持久化與供應狀態
+// @sourceSpec: ./spec.md
+// @plan: ./plan.md
+// @analysisBoundary: 新增 menu 關聯表；RBAC 為環境設定非表；不含 HTTP、UI、migrations 語句。
+// @coveredEndpoints: Microsoft SQL Server menu catalog
+
+Project advanced_features_menu {
+  database_type: 'Microsoft SQL Server'
+  Note: '''
+006 將菜單自 menuData.js 遷入 MSSQL。供應狀態以 is_active 表示（BR-001）。
+訂單 order_items 保存 menu_item_name 快照；刪除／停供餐點不得 UPDATE 既有訂單（BR-002）。
+
+分類刪除：僅當無 menu_items.category_id 引用（research CATEGORY_IN_USE）。
+
+=== 交易 ===
+- 建立餐點 + 規格群組 + 選項：單一 transaction
+- availability PATCH：單列 UPDATE is_active
+
+=== 跨端點 ===
+- GET /api/categories、/api/menu-items 讀本模型
+- /api/merchant/* 寫入本模型（menu/admin 角色）
+
+003–005 orders/cart 表不變；006 不新增訂單欄位。
+  '''
+}
+
+Table categories {
+  id uuid [pk]
+  name varchar(100) [not null, unique]
+  sort_order int [null]
+  created_at datetime2 [not null]
+
+  Note: 'FR-001；刪除前須零餐點引用'
+}
+
+Table menu_items {
+  id uuid [pk]
+  category_id uuid [not null, ref: > categories.id]
+  name varchar(200) [not null]
+  image_url varchar(500) [null]
+  price decimal(10,2) [not null]
+  is_active bit [not null, default: true]
+  created_at datetime2 [not null]
+  updated_at datetime2 [not null]
+
+  Note: 'FR-002、FR-004；售完 is_active=0'
+}
+
+Table menu_item_option_groups {
+  id uuid [pk]
+  menu_item_id uuid [not null, ref: > menu_items.id]
+  name varchar(100) [not null]
+  is_required bit [not null, default: true]
+  sort_order int [null]
+
+  indexes {
+    (id, menu_item_id) [unique]
+  }
+
+  Note: 'FR-003'
+}
+
+Table menu_item_options {
+  id uuid [pk]
+  menu_item_id uuid [not null, ref: > menu_items.id]
+  option_group_id uuid [not null, ref: > menu_item_option_groups.id]
+  name varchar(100) [not null]
+  price_adjustment decimal(10,2) [not null, default: 0]
+  is_active bit [not null, default: true]
+
+  indexes {
+    (id, option_group_id, menu_item_id) [unique]
+  }
+
+  Note: 'FR-003、FR-005；選項停供'
+}
+
+// 邏輯投影：003–005 既有表（006 不修改 schema，供整合測試追溯）
+
+Table guest_sessions {
+  session_id varchar [pk]
+  Note: '003'
+}
+
+Table orders {
+  id uuid [pk]
+  order_number varchar(32) [not null, unique]
+  total_amount decimal(10,2) [not null, note: '快照；FR-012']
+  Note: '005 擴充欄位見 005/data-model.dbml；006 不 ALTER'
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null]
+  menu_item_id uuid [not null, note: '參照可能已停供；顯示用 menu_item_name 快照']
+  menu_item_name varchar [not null]
+  Note: 'BR-002'
+}

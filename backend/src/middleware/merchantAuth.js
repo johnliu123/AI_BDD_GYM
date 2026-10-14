@@ -1,19 +1,8 @@
-import crypto from 'node:crypto';
-
-function safeEqual(a, b) {
-  const left = Buffer.from(String(a), 'utf8');
-  const right = Buffer.from(String(b), 'utf8');
-  const maxLen = Math.max(left.length, right.length);
-  const paddedLeft = Buffer.alloc(maxLen);
-  const paddedRight = Buffer.alloc(maxLen);
-  left.copy(paddedLeft);
-  right.copy(paddedRight);
-  return crypto.timingSafeEqual(paddedLeft, paddedRight) && left.length === right.length;
-}
+import { hasAnyMerchantCredentials, resolveMerchantRolesForToken } from '../config/merchantCredentials.js';
+import { safeEqual } from '../utils/safeEqual.js';
 
 export function requireMerchantAuth(req, res, next) {
-  const configured = process.env.MERCHANT_TOKEN?.trim();
-  if (!configured) {
+  if (!hasAnyMerchantCredentials()) {
     return res.status(503).json({
       error: {
         code: 'MERCHANT_NOT_CONFIGURED',
@@ -23,7 +12,7 @@ export function requireMerchantAuth(req, res, next) {
   }
 
   const token = (req.headers['x-merchant-token'] || req.headers['X-Merchant-Token'] || '').toString();
-  if (!token || !safeEqual(token, configured)) {
+  if (!token) {
     return res.status(401).json({
       error: {
         code: 'MERCHANT_UNAUTHORIZED',
@@ -32,5 +21,42 @@ export function requireMerchantAuth(req, res, next) {
     });
   }
 
+  const roles = resolveMerchantRolesForToken(token);
+  if (!roles) {
+    return res.status(401).json({
+      error: {
+        code: 'MERCHANT_UNAUTHORIZED',
+        message: '店家憑證無效。',
+      },
+    });
+  }
+
+  req.merchantToken = token;
+  req.merchantRoles = roles;
   next();
 }
+
+export function requireMerchantRole(...allowedRoles) {
+  return (req, res, next) => {
+    requireMerchantAuth(req, res, () => {
+      if (res.headersSent) {
+        return;
+      }
+
+      const roles = req.merchantRoles || [];
+      const allowed = new Set(allowedRoles);
+      const hasRole = roles.some((role) => allowed.has(role) || role === 'admin');
+      if (!hasRole) {
+        return res.status(403).json({
+          error: {
+            code: 'MERCHANT_FORBIDDEN',
+            message: '此操作需要更高權限。',
+          },
+        });
+      }
+      next();
+    });
+  };
+}
+
+export { safeEqual };

@@ -24,7 +24,8 @@ const files = readdirSync(migrationsDir)
   .filter((name) => name.endsWith('.mssql.sql'))
   .sort();
 
-assert.ok(files.length >= 5, 'expected at least 005 migrations');
+assert.ok(files.length >= 6, 'expected at least 006 migrations');
+assert.ok(files.includes('006_menu_catalog.mssql.sql'), 'missing 006_menu_catalog.mssql.sql');
 assert.ok(files.includes('005_payment_cancel.mssql.sql'), 'missing 005_payment_cancel.mssql.sql');
 
 for (const file of files) {
@@ -45,4 +46,10 @@ for (const token of requiredIn005) {
   assert.ok(migration005.includes(token), `005 migration missing: ${token}`);
 }
 
-console.log(`verify-migrations: pass (${files.length} files, 005 DDL tokens ok)`);
+const requiredIn006 = ['categories', 'menu_items', 'menu_item_option_groups', 'menu_item_options'];
+const migration006 = readFileSync(path.join(migrationsDir, '006_menu_catalog.mssql.sql'), 'utf8');
+for (const token of requiredIn006) {
+  assert.ok(migration006.includes(token), `006 migration missing: ${token}`);
+}
+
+console.log(`verify-migrations: pass (${files.length} files, 005/006 DDL tokens ok)`);

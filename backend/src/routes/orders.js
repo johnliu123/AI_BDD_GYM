@@ -8,6 +8,8 @@ import { logServerError } from '../utils/safeLogger.js';
 
 const router = express.Router();
 
+const IGNORED_CLIENT_AMOUNT_KEYS = new Set(['total_amount']);
+
 function validateCreateOrderBody(body) {
   if (body === undefined || body === null) {
     return true;
@@ -15,7 +17,7 @@ function validateCreateOrderBody(body) {
   if (typeof body !== 'object' || Array.isArray(body)) {
     return false;
   }
-  return Object.keys(body).length === 0;
+  return Object.keys(body).every((key) => IGNORED_CLIENT_AMOUNT_KEYS.has(key));
 }
 
 function validatePayOrderBody(body) {
@@ -29,11 +31,12 @@ function validatePayOrderBody(body) {
   if (keys.length === 0) {
     return true;
   }
-  if (keys.length === 1 && keys[0] === 'simulate_outcome') {
-    const outcome = body.simulate_outcome;
-    return outcome === 'success' || outcome === 'failure';
-  }
-  return false;
+  return keys.every(
+    (key) =>
+      IGNORED_CLIENT_AMOUNT_KEYS.has(key)
+      || (key === 'simulate_outcome'
+        && (body.simulate_outcome === 'success' || body.simulate_outcome === 'failure'))
+  );
 }
 
 router.use('/api/orders', attachGuestSession);

@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import { tryExecuteMenuQuery } from './menuMemorySql.js';
+import { seedMenuCatalogIntoMemoryState } from '../data/menuCatalogSeed.js';
 
 function nowIso() {
   return new Date().toISOString();
@@ -20,6 +22,10 @@ function createEmptyState() {
     order_item_options: [],
     order_idempotency_keys: new Map(),
     payment_idempotency_keys: new Map(),
+    categories: new Map(),
+    menu_items: new Map(),
+    menu_item_option_groups: new Map(),
+    menu_item_options: new Map(),
   };
 }
 
@@ -41,6 +47,10 @@ function cloneState(state) {
     order_item_options: state.order_item_options.map((row) => ({ ...row })),
     order_idempotency_keys: cloneMapRecords(state.order_idempotency_keys),
     payment_idempotency_keys: cloneMapRecords(state.payment_idempotency_keys),
+    categories: cloneMapRecords(state.categories),
+    menu_items: cloneMapRecords(state.menu_items),
+    menu_item_option_groups: cloneMapRecords(state.menu_item_option_groups),
+    menu_item_options: cloneMapRecords(state.menu_item_options),
   };
 }
 
@@ -774,6 +784,11 @@ function executeQuery(state, text, params = []) {
     return { rows: [], rowCount: removed };
   }
 
+  const menuResult = tryExecuteMenuQuery(state, sql, params);
+  if (menuResult !== undefined) {
+    return menuResult;
+  }
+
   throw new Error(`memoryDatabase: unsupported query: ${sql.slice(0, 120)}`);
 }
 
@@ -823,6 +838,7 @@ export function createMemoryPool() {
     },
     initSchema() {
       resetMemoryDatabase();
+      seedMenuCatalogIntoMemoryState(sharedState);
       return Promise.resolve();
     },
   };

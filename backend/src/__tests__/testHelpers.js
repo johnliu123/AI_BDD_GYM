@@ -49,6 +49,8 @@ export function postCreateOrder(app, session, { body = {}, idempotencyKey } = {}
 }
 
 export const MERCHANT_TEST_TOKEN = 'test-merchant-token';
+export const MERCHANT_ORDERS_ONLY_TOKEN = 'test-orders-only';
+export const MERCHANT_MENU_ONLY_TOKEN = 'test-menu-only';
 
 export function merchantHeaders(token = MERCHANT_TEST_TOKEN) {
   return { 'X-Merchant-Token': token };
@@ -75,6 +77,31 @@ export function merchantGet(app, path, { token = MERCHANT_TEST_TOKEN, query } = 
 
 export function merchantPost(app, path, { token = MERCHANT_TEST_TOKEN, body = {} } = {}) {
   return request(app).post(path).set(merchantHeaders(token)).send(body);
+}
+
+export function merchantPatch(app, path, { token = MERCHANT_TEST_TOKEN, body = {} } = {}) {
+  return request(app).patch(path).set(merchantHeaders(token)).send(body);
+}
+
+export async function setMenuOptionActive(app, menuItemId, optionId, isActive, token = MERCHANT_TEST_TOKEN) {
+  return merchantPatch(app, `/api/merchant/menu-items/${menuItemId}/options/${optionId}/availability`, {
+    token,
+    body: { is_active: isActive },
+  });
+}
+
+export async function setMenuItemActive(app, menuItemId, isActive, token = MERCHANT_TEST_TOKEN) {
+  return merchantPatch(app, `/api/merchant/menu-items/${menuItemId}/availability`, {
+    token,
+    body: { is_active: isActive },
+  });
+}
+
+export async function updateMenuItemPrice(app, menuItemId, price, token = MERCHANT_TEST_TOKEN) {
+  return merchantPatch(app, `/api/merchant/menu-items/${menuItemId}`, {
+    token,
+    body: { price },
+  });
 }
 
 export function postPayOrder(app, session, orderNumber, { body = {}, idempotencyKey } = {}) {

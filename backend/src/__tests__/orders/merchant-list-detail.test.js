@@ -67,14 +67,17 @@ test('merchant list and detail without token return 401', async () => {
 });
 
 test('GET /api/merchant/orders returns 503 when MERCHANT_TOKEN is unset', async () => {
-  const saved = process.env.MERCHANT_TOKEN;
+  const savedToken = process.env.MERCHANT_TOKEN;
+  const savedCredentials = process.env.MERCHANT_CREDENTIALS;
   delete process.env.MERCHANT_TOKEN;
+  delete process.env.MERCHANT_CREDENTIALS;
   try {
     const response = await merchantGet(app, '/api/merchant/orders', { token: MERCHANT_TEST_TOKEN });
     assert.equal(response.status, 503);
     assert.equal(response.body.error.code, 'MERCHANT_NOT_CONFIGURED');
   } finally {
-    process.env.MERCHANT_TOKEN = saved;
+    process.env.MERCHANT_TOKEN = savedToken;
+    process.env.MERCHANT_CREDENTIALS = savedCredentials;
   }
 });
 

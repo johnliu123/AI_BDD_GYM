@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAddToCartPayload, isOptionSelectionComplete, loadMenuData } from './menuApi.js';
+import {
+  buildAddToCartPayload,
+  isOptionSelectionComplete,
+  loadMenuData,
+  loadPublicMenuItems,
+} from './menuApi.js';
 
 function jsonResponse(body, ok = true) {
   return {
@@ -8,6 +13,22 @@ function jsonResponse(body, ok = true) {
     json: async () => body,
   };
 }
+
+test('loadPublicMenuItems throws server error message instead of returning empty items', async () => {
+  const fetcher = async () => jsonResponse({ error: { message: '載入餐點失敗。' } }, false);
+
+  await assert.rejects(loadPublicMenuItems(fetcher), {
+    message: '載入餐點失敗。',
+  });
+});
+
+test('loadPublicMenuItems rejects successful responses without an items array', async () => {
+  const fetcher = async () => jsonResponse({ not_items: [] });
+
+  await assert.rejects(loadPublicMenuItems(fetcher), {
+    message: 'INVALID_MENU_DATA_RESPONSE',
+  });
+});
 
 test('rejects failed API responses instead of treating them as an empty menu', async () => {
   const fetcher = async (url) =>

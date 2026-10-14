@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>木禾食堂｜菜單管理與售完</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand"><span class="mark">木</span><strong>木禾食堂</strong> <small>006 雛形</small></div>
+        <label class="token-field">X-Merchant-Token
+          <input id="merchant-token" type="password" placeholder="menu 或 admin token" autocomplete="off" />
+        </label>
+      </header>
+
+      <main class="layout">
+        <section class="panel" aria-label="店家菜單管理">
+          <div class="panel-head">
+            <h1>菜單管理</h1>
+            <button type="button" id="btn-add-item" class="primary">新增餐點</button>
+          </div>
+          <p id="rbac-message" class="hint hidden" role="alert"></p>
+          <ul id="admin-menu-list" class="menu-admin-list"></ul>
+        </section>
+
+        <section class="panel" aria-label="顧客菜單預覽">
+          <div class="panel-head"><h1>顧客看到的菜單</h1></div>
+          <ul id="customer-menu-list" class="menu-customer-list"></ul>
+        </section>
+      </main>
+    </div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireMerchantAuth } from '../middleware/merchantAuth.js';
+import { requireMerchantRole } from '../middleware/merchantAuth.js';
 import {
   acceptMerchantOrder,
   completeMerchantOrder,
@@ -13,7 +13,7 @@ import { logServerError } from '../utils/safeLogger.js';
 
 const router = express.Router();
 
-router.use('/api/merchant/orders', requireMerchantAuth);
+router.use('/api/merchant/orders', requireMerchantRole('orders', 'admin'));
 
 router.get('/api/merchant/orders', async (req, res) => {
   try {

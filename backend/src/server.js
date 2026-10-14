@@ -6,11 +6,11 @@ import menuRouter from './routes/menu.js';
 import cartRouter from './routes/cart.js';
 import ordersRouter from './routes/orders.js';
 import merchantOrdersRouter from './routes/merchantOrders.js';
+import merchantMenuRouter from './routes/merchantMenu.js';
+import { errorMiddleware, notFoundHandler } from './middleware/errorMiddleware.js';
 import { getAllowedOrigins } from './services/cartService.js';
 import { ensureDatabaseReady } from './config/db.js';
 import { startSessionMaintenance } from './jobs/sessionMaintenance.js';
-import { logServerError } from './utils/safeLogger.js';
-
 const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../.env');
 const isMainServer = Boolean(process.argv[1]?.endsWith('server.js'));
 if (isMainServer) {
@@ -54,24 +54,31 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      error: {
+        code: 'INVALID_REQUEST_BODY',
+        message: '請求格式不正確。',
+      },
+    });
+  }
+  return next(err);
+});
 app.use(menuRouter);
 app.use(cartRouter);
 app.use(ordersRouter);
 app.use(merchantOrdersRouter);
+app.use(merchantMenuRouter);
 
-app.use((error, req, res, next) => {
-  if (res.headersSent) {
-    return next(error);
-  }
-
-  logServerError('http.unhandled', error, { path: req.path, method: req.method });
-  res.status(500).json({
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: '伺服器錯誤',
-    },
+if (process.env.ENABLE_HTTP_ERROR_TEST_ROUTES === '1') {
+  app.get('/api/_test/internal-error', (req, res, next) => {
+    next(new Error('simulated failure'));
   });
-});
+}
+
+app.use(notFoundHandler);
+app.use(errorMiddleware);
 
 if (process.argv[1] && process.argv[1].endsWith('server.js')) {
   app.listen(PORT, () => {

@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { menuItems } from '../../data/menuData.js';
 import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   addSampleCartItem,
   bootstrapCartSession,
   postCreateOrder,
+  updateMenuItemPrice,
 } from '../testHelpers.js';
 
 test.before(async () => {
@@ -31,22 +31,20 @@ test('GET /api/orders/{order_number} returns snapshot for same session', async (
 });
 
 test('GET /api/orders/{order_number} keeps snapshot after menu price changes', async () => {
-  const menuItem = menuItems.find((item) => item.id === 'item-1');
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
   const created = await postCreateOrder(app, session);
   const orderNumber = created.body.order.order_number;
   const snapshotTotal = created.body.order.total;
 
-  const previousPrice = menuItem.price;
   try {
-    menuItem.price = '9999.00';
+    await updateMenuItemPrice(app, 'item-1', '9999.00');
     const fetched = await request(app)
       .get(`/api/orders/${encodeURIComponent(orderNumber)}`)
       .set('Cookie', session.headers.Cookie);
     assert.equal(fetched.body.order.total, snapshotTotal);
   } finally {
-    menuItem.price = previousPrice;
+    await updateMenuItemPrice(app, 'item-1', '220.00');
   }
 });
 

@@ -107,9 +107,15 @@ export function validateAddItemPayload(payload) {
   const selectedIds = payload?.menu_item_option_ids;
 
   const menuItem = getMenuItemById(menuId);
-  if (!menuItem || !menuItem.is_active) {
+  if (!menuItem) {
     const error = new Error('ITEM_UNAVAILABLE');
     error.code = 'ITEM_UNAVAILABLE';
+    error.status = 409;
+    throw error;
+  }
+  if (!menuItem.is_active) {
+    const error = new Error('CART_ITEM_UNAVAILABLE');
+    error.code = 'CART_ITEM_UNAVAILABLE';
     error.status = 409;
     throw error;
   }

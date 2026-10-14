@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { menuItems } from '../../data/menuData.js';
 import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   addSampleCartItem,
   bootstrapCartSession,
   postCreateOrder,
+  setMenuItemActive,
+  setMenuOptionActive,
 } from '../testHelpers.js';
 
 test.before(async () => {
@@ -35,8 +36,6 @@ test('POST /api/orders creates order from available cart and clears cart', async
 });
 
 test('POST /api/orders rejects unavailable cart items with 409', async () => {
-  const menuItem = menuItems.find((item) => item.id === 'item-1');
-  const option = menuItem.option_groups[0].options.find((entry) => entry.id === 'opt-1');
   const session = await bootstrapCartSession(app);
 
   try {
@@ -45,12 +44,12 @@ test('POST /api/orders rejects unavailable cart items with 409', async () => {
       .post('/api/cart/items')
       .set(session.headers)
       .send({ menu_item_id: 'item-3', quantity: 1, menu_item_option_ids: [] });
-    option.is_active = false;
+    await setMenuOptionActive(app, 'item-1', 'opt-1', false);
     const response = await postCreateOrder(app, session);
     assert.equal(response.status, 409);
     assert.equal(response.body.error.code, 'CART_HAS_UNAVAILABLE_ITEMS');
   } finally {
-    option.is_active = true;
+    await setMenuOptionActive(app, 'item-1', 'opt-1', true);
   }
 });
 
@@ -66,6 +65,14 @@ test('POST /api/orders rejects extra body fields with 400', async () => {
   await addSampleCartItem(app, session);
   const response = await postCreateOrder(app, session, { body: { total: '999.99' } });
   assert.equal(response.status, 400);
+});
+
+test('POST /api/orders ignores tampered total_amount in body', async () => {
+  const session = await bootstrapCartSession(app);
+  await addSampleCartItem(app, session);
+  const response = await postCreateOrder(app, session, { body: { total_amount: '0.01' } });
+  assert.equal(response.status, 201);
+  assert.equal(response.body.order.total, '220.00');
 });
 
 test('POST /api/orders replays idempotent requests with 200', async () => {
@@ -95,17 +102,15 @@ test('POST /api/orders replays parallel requests with the same Idempotency-Key',
 });
 
 test('POST /api/orders rejects at create time when cart has only unavailable items', async () => {
-  const menuItem = menuItems.find((item) => item.id === 'item-1');
-  const option = menuItem.option_groups[0].options.find((entry) => entry.id === 'opt-1');
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
-  option.is_active = false;
+  await setMenuOptionActive(app, 'item-1', 'opt-1', false);
   try {
     const response = await postCreateOrder(app, session);
     assert.equal(response.status, 400);
     assert.equal(response.body.error.code, 'CART_EMPTY');
   } finally {
-    option.is_active = true;
+    await setMenuOptionActive(app, 'item-1', 'opt-1', true);
   }
 });
 

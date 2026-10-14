@@ -6,6 +6,7 @@ import MealOptionsDialog from '../components/MealOptionsDialog.jsx';
 import CartPage from './CartPage.jsx';
 import OrderLookupPage from './OrderLookupPage.jsx';
 import MerchantOrdersPage from './MerchantOrdersPage.jsx';
+import MerchantMenuPage from './MerchantMenuPage.jsx';
 import OrderPaymentActions from '../components/OrderPaymentActions.jsx';
 import { paymentActionErrorMessage } from '../orderPaymentUi.js';
 import { resolveMerchantToken } from '../merchantOrderApi.js';
@@ -27,6 +28,9 @@ export default function MenuPage() {
 
   const resolveViewFromHash = () => {
     const hash = globalThis.location?.hash || '';
+    if (hash.startsWith('#/merchant/menu')) {
+      return 'merchant-menu';
+    }
     if (hash.startsWith('#/merchant')) {
       return 'merchant';
     }
@@ -63,6 +67,10 @@ export default function MenuPage() {
     };
   }, []);
 
+  const handleMerchantMenuChanged = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
   const showPaymentToast = useCallback((message) => {
     if (paymentToastTimerRef.current) {
       clearTimeout(paymentToastTimerRef.current);
@@ -88,6 +96,11 @@ export default function MenuPage() {
   }, []);
 
   const navigateTo = (view) => {
+    if (view === 'merchant-menu') {
+      globalThis.location.hash = '#/merchant/menu';
+      setActiveView('merchant-menu');
+      return;
+    }
     if (view === 'merchant') {
       globalThis.location.hash = '#/merchant';
       setActiveView('merchant');
@@ -340,14 +353,40 @@ export default function MenuPage() {
           <button type="button" className={activeView === 'lookup' ? 'selected' : ''} onClick={() => navigateTo('lookup')}>
             查詢訂單
           </button>
-          <button type="button" className={activeView === 'merchant' ? 'selected' : ''} onClick={() => navigateTo('merchant')}>
+          <button
+            type="button"
+            className={activeView === 'merchant' || activeView === 'merchant-menu' ? 'selected' : ''}
+            onClick={() => navigateTo('merchant')}
+          >
             店家看板
           </button>
         </nav>
       </header>
 
-      {activeView === 'merchant' ? (
-        <MerchantOrdersPage merchantToken={merchantToken} />
+      {activeView === 'merchant' || activeView === 'merchant-menu' ? (
+        <>
+          <nav className="view-switch merchant-subnav" aria-label="店家功能">
+            <button
+              type="button"
+              className={activeView === 'merchant' ? 'selected' : ''}
+              onClick={() => navigateTo('merchant')}
+            >
+              訂單
+            </button>
+            <button
+              type="button"
+              className={activeView === 'merchant-menu' ? 'selected' : ''}
+              onClick={() => navigateTo('merchant-menu')}
+            >
+              菜單
+            </button>
+          </nav>
+          {activeView === 'merchant-menu' ? (
+            <MerchantMenuPage merchantToken={merchantToken} onMenuChanged={handleMerchantMenuChanged} />
+          ) : (
+            <MerchantOrdersPage merchantToken={merchantToken} />
+          )}
+        </>
       ) : activeView === 'menu' ? (
         <>
           <section className="menu-page__filters" aria-label="分類篩選">

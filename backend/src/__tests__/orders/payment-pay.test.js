@@ -37,15 +37,15 @@ test('POST pay succeeds with paid status and snapshot total unchanged', async ()
   assert.equal(fetched.body.order.total, snapshotTotal);
 });
 
-test('POST pay rejects extra body fields with 400', async () => {
+test('POST pay ignores tampered total_amount in body', async () => {
   const { session, orderNumber, snapshotTotal } = await createUnpaidOrder();
 
   const attempt = await postPayOrder(app, session, orderNumber, { body: { total_amount: '0.01' } });
-  assert.equal(attempt.status, 400);
-  assert.equal(attempt.body.error.code, 'INVALID_REQUEST_BODY');
+  assert.equal(attempt.status, 200);
+  assert.equal(attempt.body.order.total, snapshotTotal);
 
   const fetched = await getOrderForSession(app, session, orderNumber);
-  assert.equal(fetched.body.order.payment_status, 'unpaid');
+  assert.equal(fetched.body.order.payment_status, 'paid');
   assert.equal(fetched.body.order.total, snapshotTotal);
 });
 
