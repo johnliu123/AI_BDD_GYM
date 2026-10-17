@@ -117,9 +117,9 @@ export default function MenuPage() {
       if (mountedRef.current) {
         setCart(response.cart);
       }
-    }).catch(() => {
+    }).catch((error) => {
       if (mountedRef.current) {
-        setCartError('購物車載入失敗，請重新整理後再試。');
+        setCartError(error.message || '購物車載入失敗，請重新整理後再試。');
       }
     });
   }, []);
@@ -173,6 +173,25 @@ export default function MenuPage() {
     setBrokenImages((previous) => ({ ...previous, [itemId]: true }));
   };
 
+  const cartActionErrorMessage = (error) => {
+    if (error.code === 'CART_ITEM_UNAVAILABLE') {
+      return '此餐點或規格已停止供應，請移除後重新選擇。';
+    }
+    if (error.code === 'INVALID_CSRF_TOKEN') {
+      return '工作階段已過期，請重新整理頁面後再試。';
+    }
+    if (error.code === 'INVALID_ORIGIN') {
+      return '請使用 http://localhost:5173 或 http://127.0.0.1:5173 開啟本站。';
+    }
+    if (error.code === 'CART_SESSION_NOT_INITIALIZED') {
+      return error.message || '購物車尚未就緒，請重新整理頁面後再試。';
+    }
+    if (error.message && error.message !== 'CART_REQUEST_FAILED') {
+      return error.message;
+    }
+    return '購物車操作失敗，請稍後再試。';
+  };
+
   const runCartAction = async (action) => {
     if (!mountedRef.current) {
       return false;
@@ -188,9 +207,7 @@ export default function MenuPage() {
       return true;
     } catch (error) {
       if (mountedRef.current) {
-        setCartError(error.code === 'CART_ITEM_UNAVAILABLE'
-          ? '此餐點或規格已停止供應，請移除後重新選擇。'
-          : '購物車操作失敗，請稍後再試。');
+        setCartError(cartActionErrorMessage(error));
       }
       return false;
     } finally {
@@ -200,26 +217,31 @@ export default function MenuPage() {
     }
   };
 
-  const openOptions = (item) => {
+  const openOptions = async (item) => {
     if (!item.is_active) {
       return;
     }
-
-    setSelectedItem(item);
-    setSelectedOptions({});
 
     if (!item.option_groups?.length) {
       const result = buildAddToCartPayload(item, {});
       if (result.error) {
         return;
       }
-      runCartAction(() => cartApi.addItem(result.payload)).then((added) => {
-        if (added) {
-          navigateTo('cart');
-        }
-      });
-      setSelectedItem(null);
+      try {
+        await cartApi.getCart();
+      } catch {
+        setCartError('購物車載入失敗，請重新整理後再試。');
+        return;
+      }
+      const added = await runCartAction(() => cartApi.addItem(result.payload));
+      if (added) {
+        navigateTo('cart');
+      }
+      return;
     }
+
+    setSelectedItem(item);
+    setSelectedOptions({});
   };
 
   const addSelectedItem = (payload) => {
@@ -428,6 +450,12 @@ export default function MenuPage() {
           ) : !viewState.hasData ? (
             <div className="menu-page__empty">{viewState.message}</div>
           ) : (
+            <>
+            {cartError && (
+              <p className="cart-error" role="alert">
+                {cartError}
+              </p>
+            )}
             <section className="menu-grid" aria-label="餐點列表">
               {visibleItems.map((item) => (
                 <article key={item.id} className="menu-card">
@@ -462,6 +490,7 @@ export default function MenuPage() {
                 </article>
               ))}
             </section>
+            </>
           )}
         </>
       ) : activeView === 'cart' ? (
@@ -528,9 +557,13 @@ export default function MenuPage() {
           item={selectedItem}
           selectedOptions={selectedOptions}
           onChangeOption={(groupId, optionId) => setSelectedOptions((previous) => ({ ...previous, [groupId]: optionId }))}
-          onClose={() => setSelectedItem(null)}
+          onClose={() => {
+            setSelectedItem(null);
+            setCartError('');
+          }}
           onSubmit={addSelectedItem}
           busy={cartBusy}
+          error={cartError}
         />
       )}
     </main>

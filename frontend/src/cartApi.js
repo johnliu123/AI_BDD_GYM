@@ -2,15 +2,25 @@ export function createCartApi(fetcher = fetch) {
   let csrfToken = null;
   let bootstrapPromise = null;
 
+  async function ensureSessionReady(signal) {
+    if (csrfToken) {
+      return;
+    }
+    await getCart({ signal });
+    if (!csrfToken) {
+      const error = new Error('目前無法建立訪客工作階段。');
+      error.code = 'CART_SESSION_NOT_INITIALIZED';
+      throw error;
+    }
+  }
+
   async function request(path, { method = 'GET', body, signal } = {}) {
     const headers = { Accept: 'application/json' };
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
     if (method !== 'GET') {
-      if (!csrfToken) {
-        throw new Error('CART_SESSION_NOT_INITIALIZED');
-      }
+      await ensureSessionReady(signal);
       headers['X-CSRF-Token'] = csrfToken;
     }
 

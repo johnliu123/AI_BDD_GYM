@@ -162,6 +162,19 @@ test('POST /api/cart/items rejects invalid or missing Origin', async () => {
 
   assert.equal(missingOrigin.status, 403);
   assert.equal(invalidOrigin.status, 403);
+
+  const allowedReferer = await request(app)
+    .post('/api/cart/items')
+    .set('Referer', 'http://localhost:5173/')
+    .set('Cookie', `guest_session=${cookie}`)
+    .set('X-CSRF-Token', cartResponse.body.csrf_token)
+    .send({
+      menu_item_id: item.id,
+      quantity: 1,
+      menu_item_option_ids: selectedOptionIds,
+    });
+
+  assert.equal(allowedReferer.status, 201);
 });
 
 test('unknown session cookie yields a new empty cart instead of client-supplied session id', async () => {

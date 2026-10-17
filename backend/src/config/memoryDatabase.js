@@ -164,6 +164,19 @@ function executeQuery(state, text, params = []) {
     return { rows: row ? [row] : [], rowCount: row ? 1 : 0 };
   }
 
+  if (sql.startsWith('DELETE FROM guest_sessions WHERE session_id = $1 AND NOT EXISTS')) {
+    const sessionId = params[0];
+    const referenced =
+      [...state.orders.values()].some((row) => row.guest_session_id === sessionId)
+      || [...state.order_idempotency_keys.values()].some((row) => row.guest_session_id === sessionId)
+      || [...state.payment_idempotency_keys.values()].some((row) => row.guest_session_id === sessionId);
+    if (referenced) {
+      return { rows: [], rowCount: 0 };
+    }
+    const existed = state.guest_sessions.delete(sessionId);
+    return { rows: [], rowCount: existed ? 1 : 0 };
+  }
+
   if (sql === 'DELETE FROM guest_sessions WHERE session_id = $1') {
     const existed = state.guest_sessions.delete(params[0]);
     return { rows: [], rowCount: existed ? 1 : 0 };

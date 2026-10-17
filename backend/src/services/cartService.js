@@ -62,12 +62,28 @@ export async function ensureSession(req, res) {
   return session;
 }
 
+function resolveRequestOrigin(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (origin) {
+    return origin;
+  }
+  const referer = String(req.headers.referer || req.headers.referrer || '').trim();
+  if (!referer) {
+    return '';
+  }
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return '';
+  }
+}
+
 export function validateOrigin(req, res) {
   if (req.method === 'GET') {
     return true;
   }
 
-  const origin = String(req.headers.origin || '');
+  const origin = resolveRequestOrigin(req);
   if (!origin || !getAllowedOrigins().has(origin)) {
     res.status(403).json({
       error: {

@@ -26,6 +26,20 @@ test('bootstraps a session and sends the session CSRF token with cart writes', a
   });
 });
 
+test('addItem bootstraps the session when getCart was not called first', async () => {
+  const calls = [];
+  const api = createCartApi(async (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse({ cart: { items: [], total: '0.00' }, csrf_token: 'auto-token' });
+  });
+
+  await api.addItem({ menu_item_id: 'item-2', quantity: 1, menu_item_option_ids: [] });
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, '/api/cart');
+  assert.equal(calls[1].options.headers['X-CSRF-Token'], 'auto-token');
+});
+
 test('shares the bootstrap request to avoid creating competing sessions', async () => {
   let calls = 0;
   const api = createCartApi(async () => {

@@ -3,6 +3,19 @@ import { getPool } from '../config/db.js';
 
 const SESSION_COOKIE_NAME = 'guest_session';
 
+const SQL_DELETE_GUEST_SESSION_IF_UNREFERENCED = `
+DELETE FROM guest_sessions
+WHERE session_id = $1
+AND NOT EXISTS (SELECT 1 FROM orders WHERE guest_session_id = $1)
+AND NOT EXISTS (SELECT 1 FROM order_idempotency_keys WHERE guest_session_id = $1)
+AND NOT EXISTS (SELECT 1 FROM payment_idempotency_keys WHERE guest_session_id = $1)
+`;
+
+async function deleteGuestSessionIfUnreferenced(client, sessionId) {
+  const result = await client.query(SQL_DELETE_GUEST_SESSION_IF_UNREFERENCED, [sessionId]);
+  return (result.rowCount ?? 0) > 0;
+}
+
 export function getSessionLimits() {
   const positiveInteger = (value, fallback) => {
     const parsed = Number(value);
@@ -53,7 +66,7 @@ export async function getSessionById(sessionId, client = getPool(), now = Date.n
   }
 
   if (isExpired(row, now, getSessionLimits())) {
-    await client.query('DELETE FROM guest_sessions WHERE session_id = $1', [sessionId]);
+    await deleteGuestSessionIfUnreferenced(client, sessionId);
     return null;
   }
 
@@ -113,10 +126,13 @@ export async function pruneExpiredSessions(client = getPool(), now = Date.now())
     return 0;
   }
 
+  let removed = 0;
   for (const sessionId of expiredIds) {
-    await client.query('DELETE FROM guest_sessions WHERE session_id = $1', [sessionId]);
+    if (await deleteGuestSessionIfUnreferenced(client, sessionId)) {
+      removed += 1;
+    }
   }
-  return expiredIds.length;
+  return removed;
 }
 
 export async function deleteOrphanCarts(client = getPool()) {

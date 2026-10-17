@@ -7,6 +7,7 @@ export default function MealOptionsDialog({
   onClose,
   onSubmit,
   busy,
+  error,
 }) {
   if (!item?.option_groups?.length) {
     return null;
@@ -61,6 +62,14 @@ export default function MealOptionsDialog({
             ))}
           </fieldset>
         ))}
+        {error && (
+          <p className="cart-error" role="alert">
+            {error}
+          </p>
+        )}
+        {!complete && (
+          <p className="options-dialog__hint">請為每個規格群組選擇一項，才能加入購物車。</p>
+        )}
         <div className="options-dialog__actions">
           <button type="button" className="text-button" onClick={onClose}>取消</button>
           <button type="submit" className="action-button" disabled={busy || !complete}>
