@@ -1,6 +1,6 @@
 # Project Constitution (Artifact Registry)
 
-version: 1.1.0  
+version: 1.2.0
 scope: repository  
 enforcement: agent-read-and-self-check  
 authority: 產物內容 MUST 衝突時，以本 registry 之 shared／artifact 模組為最高優先（流程 SOP 不在此覆寫）。詳見 `references/artifact-authority.md`。
@@ -34,6 +34,7 @@ authority: 產物內容 MUST 衝突時，以本 registry 之 shared／artifact �
 | ui-plan | prototype/ | skills/ui-plan/prototype.md | active |
 | data-plan | data-model.dbml | skills/data-plan/data-model.dbml | active |
 | api-plan | http-api.yaml | skills/api-plan/http-api.yaml | active |
+| testplan | testplan.md | skills/testplan/testplan.md | active |
 | tasks | tasks.md | skills/tasks/tasks.md | active |
 
 ## 擴充

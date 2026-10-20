@@ -29,3 +29,17 @@ test('GET /api/menu-items returns item data with category name and snake_case ke
   assert.ok(!('categoryName' in item));
   assert.ok(!('imageUrl' in item));
 });
+
+test('GET /api/menu-items filters by category id and rejects unknown category ids', async () => {
+  const categoriesResponse = await request(app).get('/api/categories');
+  const categoryId = categoriesResponse.body.categories[0].id;
+
+  const filtered = await request(app).get('/api/menu-items').query({ category_id: categoryId });
+  assert.equal(filtered.status, 200);
+  assert.ok(filtered.body.items.length > 0);
+  assert.ok(filtered.body.items.every((item) => item.category_id === categoryId));
+
+  const invalid = await request(app).get('/api/menu-items').query({ category_id: 'missing-category' });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.error.code, 'INVALID_CATEGORY_ID');
+});

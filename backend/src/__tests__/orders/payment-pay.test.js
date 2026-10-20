@@ -37,16 +37,28 @@ test('POST pay succeeds with paid status and snapshot total unchanged', async ()
   assert.equal(fetched.body.order.total, snapshotTotal);
 });
 
-test('POST pay ignores tampered total_amount in body', async () => {
+test('POST pay ignores client amounts and preserves the paid order snapshot', async () => {
   const { session, orderNumber, snapshotTotal } = await createUnpaidOrder();
 
-  const attempt = await postPayOrder(app, session, orderNumber, { body: { total_amount: '0.01' } });
+  const attempt = await postPayOrder(app, session, orderNumber, {
+    body: {
+      total_amount: '0.01',
+      unit_price: '0.01',
+      line_total: '0.01',
+      items: [{ menu_item_id: 'fake', menu_item_name: '偽造餐點', quantity: 99, line_total: '0.01' }],
+    },
+  });
   assert.equal(attempt.status, 200);
+  assert.equal(attempt.body.order.payment_status, 'paid');
   assert.equal(attempt.body.order.total, snapshotTotal);
+  assert.equal(attempt.body.order.items[0].unit_price, '220.00');
+  assert.equal(attempt.body.order.items[0].line_total, '220.00');
 
   const fetched = await getOrderForSession(app, session, orderNumber);
   assert.equal(fetched.body.order.payment_status, 'paid');
   assert.equal(fetched.body.order.total, snapshotTotal);
+  assert.equal(fetched.body.order.items[0].unit_price, '220.00');
+  assert.equal(fetched.body.order.items[0].line_total, '220.00');
 });
 
 test('POST pay returns 409 ORDER_ALREADY_PAID when already paid', async () => {

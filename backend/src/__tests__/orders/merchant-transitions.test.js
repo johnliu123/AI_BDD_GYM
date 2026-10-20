@@ -5,6 +5,7 @@ import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   bootstrapCartSession,
   createSampleOrder,
+  merchantGet,
   merchantPost,
 } from '../testHelpers.js';
 
@@ -64,18 +65,48 @@ test('transition actions ignore junk amount body', async () => {
   const session = await bootstrapCartSession(app);
   const { created, orderNumber } = await orderThroughAccepted(app, session);
   const snapshotTotal = created.body.order.total;
+  const snapshotItems = created.body.order.items;
 
   const preparing = await merchantPost(app, `/api/merchant/orders/${orderNumber}/start-preparing`, {
-    body: { total: '0.01' },
+    body: {
+      total: '0.01',
+      total_amount: '0.01',
+      unit_price: '0.01',
+      line_total: '0.01',
+      items: [{ unit_price: '0.01', line_total: '0.01' }],
+    },
   });
   assert.equal(preparing.status, 200);
+  assert.equal(preparing.body.order.status, 'preparing');
   assert.equal(preparing.body.order.total, snapshotTotal);
+  assert.deepEqual(preparing.body.order.items, snapshotItems);
 
   const completed = await merchantPost(app, `/api/merchant/orders/${orderNumber}/complete`, {
-    body: { total: '0.01' },
+    body: {
+      total: '0.01',
+      total_amount: '0.01',
+      unit_price: '0.01',
+      line_total: '0.01',
+      items: [{ unit_price: '0.01', line_total: '0.01' }],
+    },
   });
   assert.equal(completed.status, 200);
+  assert.equal(completed.body.order.status, 'completed');
   assert.equal(completed.body.order.total, snapshotTotal);
+  assert.deepEqual(completed.body.order.items, snapshotItems);
+});
+
+test('transition actions reject unrelated body fields without changing order state', async () => {
+  const session = await bootstrapCartSession(app);
+  const { orderNumber } = await orderThroughAccepted(app, session);
+  const response = await merchantPost(app, `/api/merchant/orders/${orderNumber}/start-preparing`, {
+    body: { forged_role: 'admin' },
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error.code, 'INVALID_REQUEST_BODY');
+  const detail = await merchantGet(app, `/api/merchant/orders/${orderNumber}`);
+  assert.equal(detail.body.order.status, 'accepted');
 });
 
 test('double complete returns 409', async () => {

@@ -5,6 +5,8 @@ import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   addSampleCartItem,
   bootstrapCartSession,
+  expireOrderIdempotencyKey,
+  getOrderForSession,
   postCreateOrder,
   setMenuItemActive,
   setMenuOptionActive,
@@ -60,6 +62,40 @@ test('POST /api/orders rejects empty cart with 400 CART_EMPTY', async () => {
   assert.equal(response.body.error.code, 'CART_EMPTY');
 });
 
+test('POST /api/orders rejects missing Origin and invalid CSRF without clearing cart', async () => {
+  const session = await bootstrapCartSession(app);
+  await addSampleCartItem(app, session);
+
+  const missingOrigin = await request(app)
+    .post('/api/orders')
+    .set('Cookie', session.headers.Cookie)
+    .set('X-CSRF-Token', session.csrf)
+    .send({});
+  assert.equal(missingOrigin.status, 403);
+
+  const invalidOrigin = await request(app)
+    .post('/api/orders')
+    .set('Origin', 'https://evil.example')
+    .set('Cookie', session.headers.Cookie)
+    .set('X-CSRF-Token', session.csrf)
+    .send({});
+  assert.equal(invalidOrigin.status, 403);
+  assert.equal(invalidOrigin.body.error.code, 'INVALID_ORIGIN');
+
+  const invalidCsrf = await request(app)
+    .post('/api/orders')
+    .set('Origin', session.headers.Origin)
+    .set('Cookie', session.headers.Cookie)
+    .set('X-CSRF-Token', 'invalid-token')
+    .send({});
+  assert.equal(invalidCsrf.status, 403);
+  assert.equal(invalidCsrf.body.error.code, 'INVALID_CSRF_TOKEN');
+
+  const cart = await request(app).get('/api/cart').set('Cookie', session.headers.Cookie);
+  assert.equal(cart.body.cart.items.length, 1);
+  assert.equal(cart.body.cart.total, '220.00');
+});
+
 test('POST /api/orders rejects extra body fields with 400', async () => {
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
@@ -67,12 +103,21 @@ test('POST /api/orders rejects extra body fields with 400', async () => {
   assert.equal(response.status, 400);
 });
 
-test('POST /api/orders ignores tampered total_amount in body', async () => {
+test('POST /api/orders ignores client amounts and persists only the cart snapshot', async () => {
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
-  const response = await postCreateOrder(app, session, { body: { total_amount: '0.01' } });
+  const response = await postCreateOrder(app, session, {
+    body: { total_amount: '0.01', unit_price: '0.01', line_total: '0.01' },
+  });
   assert.equal(response.status, 201);
   assert.equal(response.body.order.total, '220.00');
+  assert.equal(response.body.order.items[0].unit_price, '220.00');
+  assert.equal(response.body.order.items[0].line_total, '220.00');
+  const persisted = await getOrderForSession(app, session, response.body.order.order_number);
+  assert.equal(persisted.status, 200);
+  assert.equal(persisted.body.order.total, '220.00');
+  assert.equal(persisted.body.order.items[0].unit_price, '220.00');
+  assert.equal(persisted.body.order.items[0].line_total, '220.00');
 });
 
 test('POST /api/orders replays idempotent requests with 200', async () => {
@@ -86,6 +131,21 @@ test('POST /api/orders replays idempotent requests with 200', async () => {
   const second = await postCreateOrder(app, session, { idempotencyKey: key });
   assert.equal(second.status, 200);
   assert.equal(second.body.order.order_number, first.body.order.order_number);
+});
+
+test('POST /api/orders treats an expired idempotency key as a new request', async () => {
+  const session = await bootstrapCartSession(app);
+  const key = 'idem-key-expired';
+  await addSampleCartItem(app, session);
+  const first = await postCreateOrder(app, session, { idempotencyKey: key });
+  assert.equal(first.status, 201);
+
+  await expireOrderIdempotencyKey(session.cookie, key);
+  await addSampleCartItem(app, session);
+  const second = await postCreateOrder(app, session, { idempotencyKey: key });
+
+  assert.equal(second.status, 201);
+  assert.notEqual(second.body.order.order_number, first.body.order.order_number);
 });
 
 test('POST /api/orders replays parallel requests with the same Idempotency-Key', async () => {

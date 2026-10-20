@@ -27,6 +27,16 @@ export async function insertIdempotencyKey(sessionId, idempotencyKey, orderId, e
   );
 }
 
+export async function deleteExpiredIdempotencyKey(sessionId, idempotencyKey, client) {
+  await client.query(
+    `DELETE FROM order_idempotency_keys
+     WHERE guest_session_id = $1
+       AND idempotency_key = $2
+       AND expires_at <= SYSUTCDATETIME()`,
+    [sessionId, idempotencyKey]
+  );
+}
+
 export async function insertOrderHeader(sessionId, orderNumber, totalAmount, client) {
   const orderId = crypto.randomUUID();
   await client.query(

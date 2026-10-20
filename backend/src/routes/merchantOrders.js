@@ -12,6 +12,15 @@ import { toClientErrorPayload } from '../utils/clientError.js';
 import { logServerError } from '../utils/safeLogger.js';
 
 const router = express.Router();
+const ACTION_FIELDS = new Set(['total', 'total_amount', 'unit_price', 'line_total', 'items']);
+const ACTION_ITEM_FIELDS = new Set([
+  'menu_item_id',
+  'menu_item_name',
+  'quantity',
+  'unit_price',
+  'line_total',
+  'options',
+]);
 
 router.use('/api/merchant/orders', requireMerchantRole('orders', 'admin'));
 
@@ -43,6 +52,26 @@ router.get('/api/merchant/orders/:order_number', async (req, res) => {
 
 async function handleAction(req, res, handler) {
   try {
+    const body = req.body;
+    const validBody = body === undefined
+      || (body !== null
+        && typeof body === 'object'
+        && !Array.isArray(body)
+        && Object.keys(body).every((key) => ACTION_FIELDS.has(key))
+        && (body.items === undefined
+          || (Array.isArray(body.items)
+            && body.items.every((item) => item
+              && typeof item === 'object'
+              && !Array.isArray(item)
+              && Object.keys(item).every((key) => ACTION_ITEM_FIELDS.has(key))))));
+    if (!validBody) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_REQUEST_BODY',
+          message: '請求 body 含有不允許的欄位。',
+        },
+      });
+    }
     const order = await handler(req.params.order_number);
     res.json(toOrderResponse(order));
   } catch (error) {

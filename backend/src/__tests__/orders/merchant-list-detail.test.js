@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { insertOrderHeader } from '../../repositories/orderRepository.js';
+import { createSessionRecord } from '../../repositories/guestSessionRepository.js';
+import { getPool } from '../../config/db.js';
 import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   bootstrapCartSession,
@@ -24,6 +27,19 @@ test('GET /api/merchant/orders lists created orders with valid token', async () 
   assert.equal(list.status, 200);
   assert.ok(list.body.orders.some((row) => row.order_number === created.body.order.order_number));
   assert.equal(list.body.orders[0].status_label, '已建立');
+});
+
+test('GET /api/merchant/orders returns no more than 200 orders', async () => {
+  const session = await createSessionRecord();
+  const pool = getPool();
+  for (let index = 0; index < 201; index += 1) {
+    const suffix = String(index).padStart(8, '0');
+    await insertOrderHeader(session.id, `ORD-20261020-${suffix}`, '10.00', pool);
+  }
+
+  const response = await merchantGet(app, '/api/merchant/orders');
+  assert.equal(response.status, 200);
+  assert.equal(response.body.orders.length, 200);
 });
 
 test('GET /api/merchant/orders filters by valid status', async () => {

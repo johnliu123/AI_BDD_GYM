@@ -10,7 +10,7 @@
 | `shared/*.md` | 跨產物約束 |
 | `skills/<skill_id>/<artifact>` | 單一產物 overlay（檔名 = 產物 basename） |
 
-## Artifacts（registry 1.1.0）
+## Artifacts（registry 1.2.0）
 
 | skill_id | artifact |
 | --- | --- |
@@ -20,6 +20,7 @@
 | ui-plan | ui-plan.md, prototype/ |
 | data-plan | data-model.dbml |
 | api-plan | http-api.yaml |
+| testplan | testplan.md |
 | tasks | tasks.md |
 
 Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（見 overlay-sop）。
@@ -28,9 +29,10 @@ Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（�
 
 預設順序見 `../../references/sdd-primary-workflow.md`：
 
-`/specify` → `/technical-research` → `/system-analysis` → `/tasks` → **`/analyze`** → `/implement`
+`/specify` → `/technical-research` → `/system-analysis` → `/testplan` → `/tasks` → **`/analyze`** → `/implement`
 
 | 步驟 | 寫入憲法產物 | 備註 |
 | --- | --- | --- |
 | `/analyze` | 否 | 唯讀健檢；報告僅對話輸出 |
-| `/implement` | 否（改程式與 tasks 勾選） | 不在 registry 內 |
+| `/testplan` | `testplan.md` | 憲法 registry 產物 |
+| `/implement` | 否（改程式與 tasks 勾選） | 不在 registry 內；依 TDD 標籤委派 `/tdd` |

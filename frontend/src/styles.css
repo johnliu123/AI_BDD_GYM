@@ -127,6 +127,18 @@ button {
   font-size: 0.75rem;
 }
 
+.menu-card__sold-out {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #a43b2f;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .menu-card__price {
   margin: 12px 0 0;
   font-size: 1.05rem;
@@ -468,6 +480,134 @@ button {
   padding: 8px 0;
 }
 
+.merchant-menu__item-toolbar,
+.merchant-menu__form-heading,
+.merchant-menu__groups-heading,
+.merchant-menu__group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.merchant-menu__item-toolbar {
+  margin: 24px 0 12px;
+  border-bottom: 1px solid #d7ded9;
+}
+
+.merchant-menu__item-toolbar h3,
+.merchant-menu__form-heading h3,
+.merchant-menu__groups-heading h4 {
+  margin: 0;
+}
+
+.merchant-menu__form-heading,
+.merchant-menu__groups-heading {
+  margin-bottom: 16px;
+}
+
+.merchant-menu__item-form {
+  margin: 16px 0 24px;
+  padding: 18px;
+  border: 1px solid #cbd4ce;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.merchant-menu__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.merchant-menu__fields label,
+.merchant-menu__group-heading label,
+.merchant-menu__option label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: #45534d;
+  font-size: 0.9rem;
+}
+
+.merchant-menu__fields input,
+.merchant-menu__fields select,
+.merchant-menu__group input,
+.merchant-menu__option input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #b9c5bd;
+  border-radius: 4px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+}
+
+.merchant-menu__check {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.merchant-menu__groups-heading {
+  margin-top: 24px;
+}
+
+.merchant-menu__group {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid #d7ded9;
+  border-radius: 4px;
+}
+
+.merchant-menu__group-heading {
+  align-items: end;
+}
+
+.merchant-menu__group-heading label {
+  flex: 1;
+}
+
+.merchant-menu__option {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(100px, 0.6fr) auto auto;
+  align-items: end;
+  gap: 12px;
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid #e1e6e2;
+}
+
+.merchant-menu__hint {
+  color: #65716b;
+}
+
+.merchant-menu__item {
+  padding: 14px 0;
+  border-bottom: 1px solid #d7ded9;
+}
+
+.merchant-menu__item > button,
+.merchant-menu__item-toolbar > button,
+.merchant-menu__item-form button:not(.text-button):not(.action-button),
+.merchant-menu__form button {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid #9aaba0;
+  border-radius: 4px;
+  background: #fff;
+  color: #174c3c;
+  cursor: pointer;
+}
+
+.merchant-menu__item-form .action-button {
+  margin-top: 18px;
+}
+
 @media (max-width: 640px) {
   .menu-page {
     padding: 24px 16px 36px;
@@ -495,5 +635,15 @@ button {
 
   .options-dialog {
     padding: 20px;
+  }
+
+  .merchant-menu__fields,
+  .merchant-menu__option {
+    grid-template-columns: 1fr;
+  }
+
+  .merchant-menu__group-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

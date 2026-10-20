@@ -4,6 +4,9 @@ description: >-
   在撰寫或修改程式前，先依需求與既有程式碼收斂 Mermaid 類別圖提案，向使用者確認後再依賴順序實作。使用者不必會畫 UML；AI 負責建模、說明取捨與施工順序。觸發：開發前先畫
   類別圖、class diagram、Mermaid classDiagram、架構提案、依圖施工、plan-with-class-diagram、
   「先給我看類別再寫程式」等。
+license: MIT
+license-file: LICENSE.txt
+attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, Inc.)"
 ---
 
 # Plan with Class Diagram — 類別圖提案後再開發

@@ -48,9 +48,8 @@ export function createCartApi(fetcher = fetch) {
 
   function getCart(options) {
     if (!bootstrapPromise) {
-      bootstrapPromise = request('/api/cart', options).catch((error) => {
+      bootstrapPromise = request('/api/cart', options).finally(() => {
         bootstrapPromise = null;
-        throw error;
       });
     }
     return bootstrapPromise;

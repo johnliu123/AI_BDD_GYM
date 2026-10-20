@@ -7,6 +7,7 @@
 | 文件 | 用途 |
 |---|---|
 | `spec.md` | 需求、User Story、驗收 |
+| `testplan.md` | User Story 測試案例、TP ID、測試入口與 NFR 追溯（任務唯一測試來源） |
 | `research.md` | 技術決策、理由與替代方案（Setup／Foundational、對齊 plan 時） |
 | `plan.md` | 專案結構、端點盤點、設計決策 |
 | `techstack.md` | 技術棧與版本（Setup；摘要自 research） |
@@ -15,9 +16,9 @@
 | `contracts/http-api.yaml` | API（後端小節前 READ 對照表列） |
 | `quickstart.md` | 建置與 smoke（Polish） |
 
-**Organization**: Phase 3 起依 User Story；故事內 **#### 前端／後端** 第二層。每小節先 **必讀對照** 表格（人讀部位 + 機器錨點），再執行任務；每個 `Tnnn` 行尾 **`←` 錨點**，且對照表每一列至少被一個任務引用。
+**Organization**: 依 `testplan.md` 的 User Story 與 TP 案例切分；每個 TP 案例至少被一項 task 引用。行為任務恰有一個 `[TDD:RED]`／`[TDD:GREEN]`／`[TDD:REFACTOR]` 標籤，多步驟工作拆成多項 task；非行為準備任務用 `[NON-TDD]` 並說明原因。每個 task 行尾含 `← testplan:TP-xxx` 及必要來源錨點。
 
-**機器錨點語法**：`spec:FR-001` · `spec:US1` · `research:{決策小節}` · `plan:設計決策·…` · `techstack:…` · `openapi:{operationId}` · `dbml:Table {name}` · `dbml:Note:…` · `ui-plan:§…` · `prototype:{file}`
+**機器錨點語法**：`testplan:TP-001` · `spec:FR-001` · `spec:US1` · `research:{決策小節}` · `plan:設計決策·…` · `techstack:…` · `openapi:{operationId}` · `dbml:Table {name}` · `dbml:Note:…` · `ui-plan:§…` · `prototype:{file}`
 
 ## Phase 1: Setup
 
@@ -61,49 +62,33 @@
 
 **端點（對齊 plan.md）**: {{us1_endpoints_from_plan}}
 
-### Tests for User Story {{us1_id}}
+### User Story {{us1_id}} 任務
 
+依 TP 案例排列；每個案例先 RED、再 GREEN、必要時 REFACTOR。只建立本故事有任務的端點小節。
+
+<!-- 若此故事有前端任務，保留此前端小節；否則移除。 -->
 #### 前端
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-{{us1_frontend_tests_bindings}}
+{{us1_frontend_bindings}}
 
-{{us1_frontend_tests}}
+{{us1_frontend_tdd_tasks}}
 
+<!-- 若此故事有後端任務，保留此後端小節；否則移除。 -->
 #### 後端
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-{{us1_backend_tests_bindings}}
+{{us1_backend_bindings}}
 
-{{us1_backend_tests}}
+{{us1_backend_tdd_tasks}}
 
-### Implementation for User Story {{us1_id}}
-
-#### 前端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-{{us1_frontend_impl_bindings}}
-
-{{us1_frontend_implementation}}
-
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-{{us1_backend_impl_bindings}}
-
-{{us1_backend_implementation}}
+<!-- 任務範例：- [ ] T001 [US1] [TDD:RED] 建立 TP-001 測試 ← `testplan:TP-001`; `spec:US1`; `openapi:{operationId}`。同一 TP 的 GREEN／可選 REFACTOR 另列任務。 -->
 
 **Checkpoint**: {{us1_checkpoint}}
 
@@ -121,5 +106,9 @@
 
 - 每個 `####` 小節（含 Setup／Foundational 若有任務表）必有 **必讀對照** 四欄表格。
 - 每個 `- [ ] Tnnn` 行尾必有 **`←`** 與至少一個機器錨點；對照表每列至少被一個任務 `←` 引用。
-- User Story 任務帶 `[USn]`；含前端／後端第二層；禁止僅列檔案名而不列部位／錨點。
+- User Story 任務帶 `[USn]`；依實際任務端點分前端／後端等小節；不同 codebase 不得混列。
+- 每個 TP 的 RED→GREEN→可選 REFACTOR 順序可由 T 編號與 Dependencies 明確判定；不可集中所有 RED 後再安排 GREEN。
+- 每個 `testplan.md` 的 TP 案例至少被一項 task 的 `testplan:TP-xxx` 錨點引用；不得新增沒有 testplan 依據的行為任務。
+- 每個行為任務恰有一個 TDD 步驟標籤；RED、GREEN、REFACTOR 必須拆成不同 task，且引用同一 TP 案例。
+- 純文件／環境準備等非行為任務須標 `[NON-TDD]` 並寫明原因；產品行為不得以此豁免 TDD。
 - 缺 openapi／dbml／ui-plan 錨點時不得發明實作任務；Setup／Foundational 及受 `/technical-research` 驅動的任務須含對應 `research:{決策小節}`。

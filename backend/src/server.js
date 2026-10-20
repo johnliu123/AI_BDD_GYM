@@ -73,7 +73,7 @@ app.use(merchantMenuRouter);
 
 if (process.env.ENABLE_HTTP_ERROR_TEST_ROUTES === '1') {
   app.get('/api/_test/internal-error', (req, res, next) => {
-    next(new Error('simulated failure'));
+    next(new Error(String(req.query.message || 'simulated failure')));
   });
 }
 

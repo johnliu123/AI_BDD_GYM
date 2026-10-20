@@ -136,3 +136,19 @@ export async function countPaymentIdempotencyKeys() {
   const result = await pool.query('SELECT COUNT(*) AS count FROM payment_idempotency_keys');
   return Number(result.rows[0]?.count ?? 0);
 }
+
+export async function expireOrderIdempotencyKey(sessionId, idempotencyKey) {
+  const pool = getPool();
+  await pool.query(
+    'UPDATE order_idempotency_keys SET expires_at = $3 WHERE guest_session_id = $1 AND idempotency_key = $2',
+    [sessionId, idempotencyKey, new Date(Date.now() - 1000).toISOString()]
+  );
+}
+
+export async function expirePaymentIdempotencyKey(sessionId, idempotencyKey) {
+  const pool = getPool();
+  await pool.query(
+    'UPDATE payment_idempotency_keys SET expires_at = $3 WHERE guest_session_id = $1 AND idempotency_key = $2',
+    [sessionId, idempotencyKey, new Date(Date.now() - 1000).toISOString()]
+  );
+}

@@ -12,6 +12,16 @@ export async function findPaymentIdempotencyOrderId(sessionId, idempotencyKey, c
   return result.rows[0]?.order_id ?? null;
 }
 
+export async function deleteExpiredPaymentIdempotencyKey(sessionId, idempotencyKey, client) {
+  await client.query(
+    `DELETE FROM payment_idempotency_keys
+     WHERE guest_session_id = $1
+       AND idempotency_key = $2
+       AND expires_at <= SYSUTCDATETIME()`,
+    [sessionId, idempotencyKey]
+  );
+}
+
 export async function insertPaymentIdempotencyKey(
   sessionId,
   idempotencyKey,

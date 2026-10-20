@@ -5,6 +5,15 @@ function assertMenuItemsPayload(body) {
   return body;
 }
 
+export function menuItemDisplayFields(item) {
+  const priceMissing = item.price === undefined || item.price === null || item.price === '';
+  return {
+    imageUrl: item.image_url || null,
+    priceLabel: priceMissing ? '暫無價格' : `NT$ ${item.price}`,
+    categoryLabel: item.category_name || '暫無分類',
+  };
+}
+
 export async function loadPublicMenuItems(fetcher = fetch, { signal } = {}) {
   const response = await fetcher('/api/menu-items', { signal });
   const body = await response.json();

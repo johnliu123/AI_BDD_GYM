@@ -1,312 +1,206 @@
-# Tasks: 相簿整理器
+# 任務：點餐系統第六迭代－進階功能與系統驗證
 
-**Input**: 設計文件位於 `specs/001-photo-album-organizer/`
+**輸入**：設計文件位於 `specs/006-advanced-features-system-verification/`
 
-**Spec 套件索引**（按需 READ；執行到對應 Phase／小節再載入，勿一次讀完）：
+**測試基線**：`testplan.md`（TP-001–TP-015）；任務依測試計畫切片，不另行推導測試範圍。
+
+**Spec 套件索引**（按需 READ）：
 
 | 文件 | 用途 |
 |---|---|
-| `spec.md` | 需求、User Story、驗收 |
-| `research.md` | 技術決策與理由 |
-| `plan.md` | 專案結構、端點盤點、設計決策 |
-| `techstack.md` | 技術棧與版本（Setup） |
-| `ui-plan.md` · `prototype/` | 前端 |
-| `data-model.dbml` | MySQL 與私有檔案儲存 |
-| `contracts/http-api.yaml` | API 契約 |
-| `quickstart.md` | 建置與 smoke |
+| `spec.md` | User Story、驗收、FR／NFR／BR／SC |
+| `testplan.md` | TP 案例、測試入口、fixture、Assert |
+| `research.md`、`techstack.md` | 技術決策、工具及版本 |
+| `plan.md` | 系統邊界、端點盤點與設計決策 |
+| `ui-plan.md`、`prototype/` | 前端流程與測試入口 |
+| `data-model.dbml` | 資料責任與 schema |
+| `contracts/http-api.yaml` | 006 API 契約；004／005 契約依 plan 引用 |
 
-**Organization**: User Story 內 **#### 前端／後端**；每小節 **必讀對照** → 任務；每 `Tnnn` 行尾 **`←` 機器錨點**；對照表每列至少一個任務引用。
-
-**機器錨點語法**：`spec:US1` · `research:前端與 API` · `research:照片持久化` · `research:格式、驗證與預覽` · `research:拍攝日期` · `research:相簿順序與 API` · `openapi:importPhoto` · `dbml:Table photos` · `ui-plan:§…` · `prototype:…`
+**任務規則**：每個行為任務只標一個 TDD 步驟。`[TDD:RED]` 只建立一個 TP 案例的測試；`[TDD:GREEN]` 只實作讓該紅燈轉綠的最小行為；`[TDD:REFACTOR]` 只整理已綠行為。未列 refactor 表示該切片不需重構。純文件／環境準備標 `[NON-TDD]` 並說明原因。每個 TP 案例至少被一個任務引用 `testplan:TP-xxx`。
 
 ## Phase 1: Setup
 
-**Purpose**: 建立前後端專案骨架、套件腳本與安全的本機設定範本。
+**Purpose**：確認研究決策與測試入口；此處僅為不改變產品行為的準備工作。
 
-**Read when executing this phase**: `research.md`（決策摘要）、`techstack.md`、`plan.md`（僅本 Phase）。
+**Read when executing this phase**：`research.md`、`techstack.md`、`plan.md`、`testplan.md`。
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `research.md` | 決策摘要 → 前端與 API | `research:前端與 API` | Vite 原生前端、Express、dev 代理 |
-| `techstack.md` | Backend／Frontend 依賴與版本表 | `techstack:backend`; `techstack:frontend` | Express、Vite、mysql2、Sharp 等版本 |
-| `plan.md` | 專案結構樹、設計決策（Origin、`data/`） | `plan:structure`; `plan:design-decisions` | 目錄布局、gitignore、env 變數 |
+| `testplan.md` | 執行命令及環境 | `testplan:TP-015` | 預設 CI／測試入口 |
+| `techstack.md` | backend/frontend test commands | `techstack:整合測試` | 工作目錄與 runtime |
 
-- [ ] T001 [P] 建立 `backend/package.json` 與啟動／測試腳本 ← `research:前端與 API`; `techstack:backend`; `plan:structure`
-- [ ] T002 [P] 建立 `frontend/package.json`、`index.html`、`vite.config.js` ← `research:前端與 API`; `techstack:frontend`; `plan:structure`
-- [ ] T003 建立 `.gitignore`、`backend/.env.example` ← `plan:design-decisions`; `plan:structure`
+- [ ] T001 [NON-TDD] 確認 Node.js、測試命令、memory DB harness 與環境設定符合 testplan；記錄差異，不修改產品行為 ← `testplan:TP-015`; `techstack:整合測試`; `plan:端點盤點`
 
 ---
 
 ## Phase 2: Foundational
 
-**Purpose**: 共用 schema、DB 連線、API 啟動、錯誤與 Origin 驗證。
-
-**⚠️ 所有使用者故事都依賴此階段完成。**
-
-**Read when executing this phase**: `research.md`（決策摘要）、`data-model.dbml`、`contracts/http-api.yaml`（共通 schema）、`plan.md`（設計決策）。
+**Purpose**：準備獨立測試資料與既有測試 harness；不包含尚未有 RED 案例的產品行為實作。
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `research.md` | 決策摘要 → 照片持久化 | `research:照片持久化` | MySQL 中繼 vs 私有檔案目錄 |
-| `data-model.dbml` | `Table albums`、`photos`、`album_photos`；索引與不變量 | `dbml:Table albums`; `dbml:Table photos`; `dbml:Table album_photos` | migration 欄位與唯一索引 |
-| `data-model.dbml` | `Project Note` → MySQL transaction／重排 | `dbml:Note:MySQL` | 後續 US 持久化前提 |
-| `contracts/http-api.yaml` | `components.schemas.ErrorBody`、共通 Origin 說明 | `openapi:components.schemas.ErrorBody`; `plan:design-decisions` | middleware 錯誤格式與 Origin |
-| `plan.md` | 設計決策：loopback、精確 Origin | `plan:design-decisions` | server 綁定與 guard |
+| `testplan.md` | 具名 Fixture 與隔離方式 | `testplan:TP-013`; `testplan:TP-015` | memory DB reset 與 migration fixture |
+| `plan.md` | 測試環境與資料端點 | `plan:端點盤點` | 使用已確認 harness |
 
-- [ ] T004 建立 `backend/migrations/001_initial_schema.sql` ← `research:照片持久化`; `dbml:Table albums`; `dbml:Table photos`; `dbml:Table album_photos`
-- [ ] T005 建立 `backend/src/db/pool.js`、`config.js` ← `research:照片持久化`; `dbml:Table albums`; `plan:structure`
-- [ ] T006 [P] 建立 `error-handler.js`、`origin-guard.js` ← `openapi:components.schemas.ErrorBody`; `plan:design-decisions`
-- [ ] T007 建立 `app.js`、`server.js` ← `plan:design-decisions`; `openapi:components.schemas.ErrorBody`
-- [ ] T008 [P] 建立 `backend/test/helpers/test-database.js` ← `dbml:Note:MySQL`; `plan:structure`
+- [ ] T002 [NON-TDD] 建立 fixture reset／隔離支援；不得新增未由 TP 案例要求的產品行為 ← `testplan:TP-013`; `testplan:TP-015`; `plan:端點盤點`
 
-**Checkpoint**: schema、DB、API 安全基礎就緒。
+**Checkpoint**：fixture 可獨立建立與清理。
 
 ---
 
-## Phase 3: User Story 1 - 建立日期分組的相簿 (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1－店家維護分類與餐點（P1）
 
-**Goal**: 上傳後依拍攝日期分組；可查詢相簿與照片；缺日期入 `unknown`。
+**Goal**：menu/admin 可建立分類與餐點，驗證輸入及分類刪除限制。
 
-**Independent Test**: 多日期 + 一張無日期；API 查詢各歸正確相簿。
+### 測試與實作任務
 
-**端點（對齊 plan.md）**: 前端、後端 API、MySQL、私有檔案儲存
-
-### Tests for User Story 1
-
-#### 前端
+#### Backend
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | User Story 1、驗收情境 1–3 | `spec:US1`; `spec:US1·情境1` | 日期分組與 unknown |
-| `ui-plan.md` | §畫面與流程 → 匯入照片、瀏覽相簿 | `ui-plan:§畫面與流程→匯入照片`; `ui-plan:§畫面與流程→瀏覽相簿` | 流程驗收 |
-| `prototype/` | `index.html` 列表、`album.html` 格狀 | `prototype:index.html`; `prototype:album.html` | 可見 UI 對照 |
+| `testplan.md` | US1 TP-001–TP-003 | `testplan:TP-001`; `testplan:TP-002`; `testplan:TP-003` | 建立、輸入驗證、分類限制 |
+| `spec.md` | US1、FR-001–FR-003 | `spec:US1`; `spec:FR-001`; `spec:FR-002`; `spec:FR-003` | 菜單規則 |
+| `contracts/http-api.yaml` | Merchant category/menu operations | `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:deleteMerchantCategory` | API response 與錯誤契約 |
 
-- [ ] T037 [US1] 依 ui-plan／prototype 走查 US1 匯入與列表（記錄於 `specs/…/us1-ui-verify.md` 或 issue） ← `spec:US1`; `ui-plan:§畫面與流程→匯入照片`; `prototype:index.html`
-
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `spec.md` | User Story 1、FR-001、FR-002 | `spec:US1`; `spec:FR-001`; `spec:FR-002` | 日期分組規則 |
-| `research.md` | 決策摘要 → 拍攝日期 | `research:拍攝日期` | EXIF 優先序、unknown 相簿 |
-| `research.md` | 決策摘要 → 格式、驗證與預覽 | `research:格式、驗證與預覽` | 白名單、20 MiB、Sharp 驗證 |
-| `contracts/http-api.yaml` | `POST /photos/import` · `importPhoto` | `openapi:importPhoto` | 匯入契約、201／400／413 |
-| `contracts/http-api.yaml` | `GET /albums` · `listAlbums`；`GET …/photos` · `listAlbumPhotos` | `openapi:listAlbums`; `openapi:listAlbumPhotos` | 列表契約 |
-| `data-model.dbml` | `Table photos` 之 `captured_at`；unknown 相簿 | `dbml:Table photos`; `dbml:Table albums` | EXIF 與 date_key |
-| `data-model.dbml` | `Project Note` → 私有檔案、`tmp/` 生命週期 | `dbml:Note:私有檔案儲存`; `dbml:Note:MySQL` | 匯入 transaction |
-
-- [ ] T009 [P] [US1] `backend/test/unit/capture-date.test.js` ← `research:拍攝日期`; `spec:FR-001`; `dbml:Table photos`
-- [ ] T010 [P] [US1] `backend/test/contract/photo-import.test.js` ← `research:格式、驗證與預覽`; `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos`; `spec:US1`
-
-### Implementation for User Story 1
-
-#### 前端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `ui-plan.md` | §實作 · 雛形技術；§驗證 · 雛形 | `ui-plan:§實作`; `ui-plan:§驗證` | fetch／FormData 與狀態 |
-| `ui-plan.md` | §畫面與流程 → 匯入、列表 | `ui-plan:§畫面與流程→匯入照片`; `ui-plan:§畫面與流程→瀏覽相簿` | 畫面區塊 |
-| `prototype/index.html`、`album.html` | 列表、匯入、格狀 | `prototype:index.html`; `prototype:album.html` | 版面與互動粒度 |
-| `contracts/http-api.yaml` | `importPhoto`、`listAlbums`、`listAlbumPhotos` 回應欄位 | `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos` | 前端呼叫契約 |
-
-- [ ] T018 [US1] `frontend/index.html` ← `ui-plan:§畫面與流程→瀏覽相簿`; `prototype:index.html`
-- [ ] T019 [US1] `frontend/src/main.js` 逐檔上傳與列表 ← `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos`; `ui-plan:§畫面與流程→匯入照片`
-- [ ] T020 [P] [US1] `frontend/src/styles.css` ← `ui-plan:§實作`; `prototype:index.html`
-
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `spec.md` | FR-001、FR-002、FR-010 | `spec:FR-001`; `spec:FR-002`; `spec:FR-010` | 分組與匯入 |
-| `plan.md` | 設計決策：每請求一檔、transaction | `plan:design-decisions` | 匯入語意 |
-| `data-model.dbml` | `Table albums`、`photos`、`album_photos`；匯入 Note | `dbml:Table albums`; `dbml:Table photos`; `dbml:Table album_photos`; `dbml:Note:MySQL` | repository／transaction |
-| `research.md` | 照片持久化、格式驗證 | `research:照片持久化`; `research:格式、驗證與預覽` | 儲存 layout、Sharp、413 |
-| `data-model.dbml` | 私有目錄 layout | `dbml:Note:私有檔案儲存` | photo-storage |
-| `contracts/http-api.yaml` | `importPhoto`、`listAlbums`、`listAlbumPhotos` | `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos` | routes 與狀態碼 |
-
-- [ ] T011 [P] [US1] `backend/src/services/capture-date.js` ← `research:拍攝日期`; `spec:FR-001`; `dbml:Table photos`
-- [ ] T012 [P] [US1] `backend/src/services/photo-storage.js` ← `research:照片持久化`; `dbml:Note:私有檔案儲存`; `plan:design-decisions`
-- [ ] T013 [US1] `backend/src/services/image-service.js` ← `research:格式、驗證與預覽`; `spec:FR-001`; `plan:design-decisions`
-- [ ] T014 [US1] `album-repository.js`、`photo-repository.js` ← `dbml:Table albums`; `dbml:Table album_photos`; `dbml:Table photos`
-- [ ] T015 [US1] `photo-service.js` 匯入 transaction ← `dbml:Note:MySQL`; `plan:design-decisions`; `openapi:importPhoto`
-- [ ] T016 [US1] `routes/albums.js`、`routes/photos.js` ← `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos`
-- [ ] T017 [US1] 註冊路由並跑 T010 ← `openapi:importPhoto`; `openapi:listAlbums`; `openapi:listAlbumPhotos`
-
-**Checkpoint**: MVP 可上傳、分組、列表。
+- [ ] T003 [US1] [TDD:RED] 為 TP-001 建立分類／餐點寫入與公開菜單可讀的測試 ← `testplan:TP-001`; `spec:US1`; `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:listMenuItems`
+- [ ] T004 [US1] [TDD:GREEN] 實作 TP-001 所需的分類／餐點建立行為 ← `testplan:TP-001`; `spec:FR-001`; `spec:FR-002`; `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`
+- [ ] T005 [US1] [TDD:RED] 為 TP-002 建立非法價格時拒絕且不部分寫入的測試 ← `testplan:TP-002`; `spec:US1·情境4`; `openapi:createMerchantMenuItem`
+- [ ] T006 [US1] [TDD:GREEN] 實作 TP-002 所需的 payload 驗證與原子性 ← `testplan:TP-002`; `spec:FR-002`; `openapi:createMerchantMenuItem`
+- [ ] T007 [US1] [TDD:RED] 為 TP-003 建立刪除使用中分類回 409 的測試 ← `testplan:TP-003`; `spec:FR-001`; `openapi:deleteMerchantCategory`
+- [ ] T008 [US1] [TDD:GREEN] 實作 TP-003 所需的 `CATEGORY_IN_USE` 拒絕行為 ← `testplan:TP-003`; `spec:FR-001`; `openapi:deleteMerchantCategory`
+- [ ] T009 [US1] [TDD:REFACTOR] 在 TP-001–TP-003 測試保持綠燈下整理菜單寫入程式；不得改變契約 ← `testplan:TP-001`; `testplan:TP-002`; `testplan:TP-003`; `openapi:createMerchantMenuItem`
 
 ---
 
-## Phase 4: User Story 2 - 以拖放方式重新排列照片 (Priority: P2)
+## Phase 4: User Story 2－管理餐點與規格供應狀態（P1）
 
-**Goal**: 同相簿拖放排序並持久化；無效操作不變更。
+**Goal**：店家切換供應狀態後，菜單與加購驗證使用最新持久化狀態。
 
-**Independent Test**: 排序後重載一致；跨相簿／取消無變更。
-
-**端點（對齊 plan.md）**: 前端、後端 API、MySQL
-
-### Tests for User Story 2
-
-#### 前端
+#### Backend
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | User Story 2、驗收情境 1–3 | `spec:US2`; `spec:US2·情境3` | 取消／無效放置 |
-| `ui-plan.md` | §畫面與流程 → 排序；§互動（拖放模擬） | `ui-plan:§畫面與流程→排序` | DnD 或等價 UX |
-| `prototype/album.html` | 點兩張交換順序 | `prototype:album.html` | 流程級模擬 |
+| `testplan.md` | US2 TP-004–TP-005 | `testplan:TP-004`; `testplan:TP-005` | 停供餐點／選項 |
+| `spec.md` | US2、FR-004–FR-006、FR-011 | `spec:US2`; `spec:FR-004`; `spec:FR-005`; `spec:FR-006`; `spec:FR-011` | 供應狀態權威 |
+| `contracts/http-api.yaml` | Availability operations | `openapi:patchMenuItemAvailability`; `openapi:patchMenuOptionAvailability` | PATCH 行為 |
 
-- [ ] T038 [US2] 走查 US2 排序 UX（ui-plan／prototype） ← `spec:US2`; `ui-plan:§畫面與流程→排序`; `prototype:album.html`
+- [ ] T010 [US2] [TDD:RED] 為 TP-004 建立餐點停供後 API／公開菜單反映狀態的測試 ← `testplan:TP-004`; `spec:US2`; `openapi:patchMenuItemAvailability`; `openapi:listMenuItems`
+- [ ] T011 [US2] [TDD:GREEN] 實作 TP-004 的餐點停供與恢復供應行為 ← `testplan:TP-004`; `spec:FR-004`; `spec:FR-006`; `openapi:patchMenuItemAvailability`
+- [ ] T012 [US2] [TDD:RED] 為 TP-005 建立停供選項不能加入 cart 的測試 ← `testplan:TP-005`; `spec:FR-005`; `spec:FR-011`; `openapi:patchMenuOptionAvailability`; `002-openapi:addCartItem`
+- [ ] T013 [US2] [TDD:GREEN] 實作 TP-005 的選項供應狀態驗證 ← `testplan:TP-005`; `spec:FR-005`; `spec:FR-011`; `openapi:patchMenuOptionAvailability`; `002-openapi:addCartItem`
 
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `spec.md` | User Story 2 | `spec:US2` | 排序持久化 |
-| `research.md` | 決策摘要 → 相簿順序與 API | `research:相簿順序與 API` | 完整 ID 清單 reorder |
-| `contracts/http-api.yaml` | `PUT …/photo-order` · `updateAlbumPhotoOrder` | `openapi:updateAlbumPhotoOrder` | 400／409／200 |
-| `data-model.dbml` | `album_photos.position`；重排 transaction Note | `dbml:Table album_photos`; `dbml:Note:MySQL` | 0..n-1 不變量 |
-
-- [ ] T021 [P] [US2] `backend/test/contract/photo-order.test.js` ← `research:相簿順序與 API`; `openapi:updateAlbumPhotoOrder`; `spec:US2`; `dbml:Table album_photos`
-
-### Implementation for User Story 2
-
-#### 前端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `ui-plan.md` | §畫面與流程 → 排序 | `ui-plan:§畫面與流程→排序` | 拖放／還原 |
-| `prototype/album.html` | 排序模式提示 | `prototype:album.html` | 互動 |
-| `contracts/http-api.yaml` | `updateAlbumPhotoOrder` | `openapi:updateAlbumPhotoOrder` | PUT body `photo_ids` |
-
-- [ ] T025 [US2] `frontend/src/main.js` DnD 與 API ← `openapi:updateAlbumPhotoOrder`; `ui-plan:§畫面與流程→排序`
-- [ ] T026 [P] [US2] `frontend/src/styles.css` 拖曳狀態 ← `ui-plan:§畫面與流程→排序`; `prototype:album.html`
-
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `research.md` | 相簿順序與 API | `research:相簿順序與 API` | 同相簿、手動後 append |
-| `contracts/http-api.yaml` | `updateAlbumPhotoOrder` | `openapi:updateAlbumPhotoOrder` | 路由與錯誤 |
-| `data-model.dbml` | 重排 transaction | `dbml:Note:MySQL`; `dbml:Table album_photos` | position 更新 |
-
-- [ ] T022 [US2] `photo-repository.js` 排序 transaction ← `research:相簿順序與 API`; `dbml:Note:MySQL`; `dbml:Table album_photos`
-- [ ] T023 [US2] `photo-service.js` 排序驗證 ← `research:相簿順序與 API`; `openapi:updateAlbumPhotoOrder`; `spec:US2`
-- [ ] T024 [US2] `routes/albums.js` 排序端點 ← `research:相簿順序與 API`; `openapi:updateAlbumPhotoOrder`
-
-**Checkpoint**: 排序一致且可重載。
+**Checkpoint**：TP-004、TP-005 通過；若需整理才新增獨立 REFACTOR 任務。
 
 ---
 
-## Phase 5: User Story 3 - 以平鋪式預覽瀏覽相片 (Priority: P3)
+## Phase 5: User Story 3－阻擋顧客無效下單（P1，精簡）
 
-**Goal**: 格狀縮圖、preview API、空狀態。
+**Story binding**：`testplan:TP-006`–`testplan:TP-008`；只保留各案例的單步任務對照。
 
-**Independent Test**: preview 回 webp；空相簿可辨識。
-
-**端點（對齊 plan.md）**: 前端、後端 API、私有檔案儲存
-
-### Tests for User Story 3
-
-#### 前端
+#### Frontend
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | User Story 3 | `spec:US3` | 平鋪預覽 |
-| `ui-plan.md` | §畫面與流程 → 瀏覽；空狀態 | `ui-plan:§畫面與流程→瀏覽相簿` | 格狀／空狀態 |
+| `testplan.md` | US3 cart 不可用項目呈現 | `testplan:TP-006` | UI 狀態與總額 |
+| `ui-plan.md` | 顧客售完標示 | `ui-plan:§顧客售完標示` | 項目呈現 |
 
-- [ ] T039 [US3] 走查 US3 格狀與空狀態 ← `spec:US3`; `ui-plan:§畫面與流程→瀏覽相簿`; `prototype:album.html`
+- [ ] T014 [US3] [TDD:RED] 建立 TP-006 購物車停供項目呈現與金額測試 ← `testplan:TP-006`; `spec:FR-007`; `ui-plan:§顧客售完標示`
+- [ ] T015 [US3] [TDD:GREEN] 實作 TP-006 購物車不可用項目呈現 ← `testplan:TP-006`; `spec:FR-013`; `ui-plan:§顧客售完標示`
 
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `research.md` | 格式、驗證與預覽 | `research:格式、驗證與預覽` | WebP 預覽、無 EXIF |
-| `contracts/http-api.yaml` | `GET …/preview` · `getPhotoPreview` | `openapi:getPhotoPreview` | 200 image/*、404 |
-| `data-model.dbml` | `photos.preview_path`、私有儲存 Note | `dbml:Table photos`; `dbml:Note:私有檔案儲存` | 安全讀檔 |
-
-- [ ] T027 [P] [US3] `backend/test/contract/photo-preview.test.js` ← `research:格式、驗證與預覽`; `openapi:getPhotoPreview`; `dbml:Table photos`
-
-### Implementation for User Story 3
-
-#### 前端
+#### Backend
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `ui-plan.md` | 格狀、preview URL | `ui-plan:§畫面與流程→瀏覽相簿` | UI |
-| `contracts/http-api.yaml` | `listAlbumPhotos` 之 preview_url、`getPhotoPreview` | `openapi:listAlbumPhotos`; `openapi:getPhotoPreview` | 縮圖來源 |
+| `testplan.md` | US3 建單拒絕與金額權威 | `testplan:TP-007`; `testplan:TP-008` | API outcome 與持久化 |
+| `contracts/http-api.yaml` | create order | `003-openapi:createOrder` | 供應驗證與計價 |
 
-- [ ] T030 [US3] `frontend/src/main.js` 格狀與空狀態 ← `openapi:listAlbumPhotos`; `openapi:getPhotoPreview`; `ui-plan:§畫面與流程→瀏覽相簿`
-- [ ] T031 [P] [US3] `frontend/src/styles.css` 格狀樣式 ← `ui-plan:§畫面與流程→瀏覽相簿`; `prototype:album.html`
-
-#### 後端
-
-**必讀對照**
-
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
-|---|---|---|---|
-| `research.md` | 格式、驗證與預覽 | `research:格式、驗證與預覽` | preview 衍生檔 |
-| `contracts/http-api.yaml` | `getPhotoPreview` | `openapi:getPhotoPreview` | 串流預覽 |
-| `data-model.dbml` | preview 路徑、無公開 URL | `dbml:Table photos`; `dbml:Note:私有檔案儲存` | 讀檔 |
-
-- [ ] T028 [US3] `photo-service.js` preview 讀檔 ← `research:格式、驗證與預覽`; `dbml:Table photos`; `dbml:Note:私有檔案儲存`
-- [ ] T029 [US3] `routes/photos.js` preview 路由 ← `openapi:getPhotoPreview`
-
-**Checkpoint**: 格狀預覽就緒。
+- [ ] T016 [US3] [TDD:RED] 建立 TP-007 停供 cart 建單拒絕且保留 cart 的測試 ← `testplan:TP-007`; `spec:FR-008`; `003-openapi:createOrder`
+- [ ] T017 [US3] [TDD:GREEN] 實作 TP-007 建單前供應狀態驗證 ← `testplan:TP-007`; `spec:FR-008`; `spec:FR-013`; `003-openapi:createOrder`
+- [ ] T018 [US3] [TDD:RED] 建立 TP-008 偽造金額／供應欄位不影響持久化的測試 ← `testplan:TP-008`; `spec:FR-012`; `spec:SC-005`; `003-openapi:createOrder`
+- [ ] T019 [US3] [TDD:GREEN] 實作 TP-008 伺服器端金額與供應狀態權威 ← `testplan:TP-008`; `spec:FR-012`; `spec:BR-001`; `003-openapi:createOrder`
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: User Story 4－店家 API 角色控管（P1，精簡）
 
-**Purpose**: E2E、文件、可觀測性。
+#### Backend
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `quickstart.md` | 全文指令與 smoke 步驟 | `quickstart:full` | T034–T036 |
-| `spec.md` | 各 US Independent Test | `spec:US1`; `spec:US2`; `spec:US3` | smoke 範圍 |
-| `ui-plan.md` | §驗證 · 錯誤／載入狀態 | `ui-plan:§驗證` | T033 |
+| `testplan.md` | US4 role matrix 與 credential errors | `testplan:TP-009`; `testplan:TP-010` | 角色及認證回應 |
+| `contracts/http-api.yaml` | merchant authorization errors | `openapi:components.responses.MerchantForbidden`; `openapi:components.responses.MerchantUnauthorized` | 錯誤契約 |
 
-- [ ] T032 [P] 後端安全日誌 ← `openapi:components.schemas.ErrorBody`; `plan:design-decisions`
-- [ ] T033 [P] 前端錯誤／載入 UI ← `ui-plan:§驗證`; `spec:US1`
-- [ ] T034 更新 quickstart、`.env.example` ← `quickstart:full`; `plan:structure`
-- [ ] T035 執行測試與 build ← `quickstart:full`
-- [ ] T036 smoke test ← `quickstart:full`; `spec:US1`; `spec:US2`; `spec:US3`
+- [ ] T020 [US4] [TDD:RED] 建立 TP-009 角色允許／拒絕矩陣測試 ← `testplan:TP-009`; `spec:FR-009`; `spec:FR-010`; `spec:FR-014`; `openapi:components.responses.MerchantForbidden`
+- [ ] T021 [US4] [TDD:GREEN] 實作 TP-009 menu／orders／admin 授權矩陣 ← `testplan:TP-009`; `spec:BR-003`; `openapi:components.responses.MerchantForbidden`
+- [ ] T022 [US4] [TDD:RED] 建立 TP-010 未授權／未配置憑證回應測試 ← `testplan:TP-010`; `spec:US4·情境4`; `openapi:components.responses.MerchantUnauthorized`; `openapi:components.responses.MerchantNotConfigured`
+- [ ] T023 [US4] [TDD:GREEN] 實作 TP-010 的 401／503 回應行為 ← `testplan:TP-010`; `spec:FR-015`; `openapi:components.responses.MerchantUnauthorized`; `openapi:components.responses.MerchantNotConfigured`
+
+---
+
+## Phase 7: User Story 5－一致錯誤回應（P1，精簡）
+
+#### Backend
+
+**必讀對照**
+
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
+|---|---|---|---|
+| `testplan.md` | US5 404／500 與 NFR 驗證 | `testplan:TP-011`; `testplan:TP-012` | 錯誤格式、安全與遠端呼叫 |
+| `research.md` | 集中式 HTTP 例外處理 | `research:集中式 HTTP 例外處理` | middleware 行為 |
+
+- [ ] T024 [US5] [TDD:RED] 建立 TP-011 未知 API 路徑回 JSON 404 的測試 ← `testplan:TP-011`; `spec:FR-017`; `spec:NFR-010`; `openapi:components.responses.NotFound`
+- [ ] T025 [US5] [TDD:GREEN] 實作 TP-011 JSON 404 handler ← `testplan:TP-011`; `spec:FR-017`; `openapi:components.responses.NotFound`
+- [ ] T026 [US5] [TDD:RED] 建立 TP-012 500 body 不洩漏且無額外遠端呼叫的測試 ← `testplan:TP-012`; `spec:FR-016`; `spec:NFR-010`; `spec:NFR-011`
+- [ ] T027 [US5] [TDD:GREEN] 實作 TP-012 集中錯誤處理與安全日誌 ← `testplan:TP-012`; `spec:FR-016`; `spec:NFR-010`; `spec:NFR-011`; `research:集中式 HTTP 例外處理`
+
+---
+
+## Phase 8: User Story 6－整合與系統驗證（P1，精簡）
+
+#### Backend
+
+**必讀對照**
+
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
+|---|---|---|---|
+| `testplan.md` | US6 lifecycle、idempotency、CI | `testplan:TP-013`; `testplan:TP-014`; `testplan:TP-015` | 整合與預設驗證 |
+| `research.md` | 整合測試與 smoke | `research:整合測試與 smoke` | 測試環境 |
+
+- [ ] T028 [US6] [TDD:RED] 建立 TP-013 顧客至店家完成訂單的整合測試 ← `testplan:TP-013`; `spec:FR-018`; `spec:FR-019`; `004-openapi:completeMerchantOrder`
+- [ ] T029 [US6] [TDD:GREEN] 實作 TP-013 整合流程所需的缺漏行為 ← `testplan:TP-013`; `spec:SC-003`; `research:整合測試與 smoke`
+- [ ] T030 [US6] [TDD:RED] 建立 TP-014 冪等重送與竄改金額整合測試 ← `testplan:TP-014`; `spec:SC-005`; `003-openapi:createOrder`; `005-openapi:payOrder`
+- [ ] T031 [US6] [TDD:GREEN] 實作 TP-014 所需的冪等與伺服器計價行為 ← `testplan:TP-014`; `spec:FR-012`; `spec:SC-005`
+- [ ] T032 [US6] [NON-TDD] 執行 TP-015 指定的預設 CI／migration 命令並記錄結果；這是環境驗證，不改變產品行為 ← `testplan:TP-015`; `spec:NFR-012`; `spec:SC-007`; `techstack:整合測試`
 
 ---
 
 ## Dependencies & Execution Order
 
-- 進入任一 `####` 小節：**先 READ 必讀對照每一列**（人讀部位 + 機器錨點），再執行該小節任務。
-- 依 **T 編號升序** 與各 Phase **Checkpoint**；`[P]` 僅在無檔案衝突且無依賴未完成時平行。
+- 每個 `[TDD:RED]` 必須先單獨通過預期紅燈驗證，對應的 `[TDD:GREEN]` 才可開始；GREEN 只能通過該案例所需的最小行為。
+- `[TDD:REFACTOR]` 僅能在對應案例全綠後執行；未需要重構可省略。
+- 依 T 編號與前置依賴執行；`[NON-TDD]` 僅限無產品行為變更的準備、文件或環境任務，必須附原因。
 
 ## Format Validation
 
-- 每 `####` 小節有四欄 **必讀對照**；每 `Tnnn` 有 **`←` 錨點**；對照表每列至少一個任務引用。
-- OpenAPI 任務必含 `openapi:{operationId}`；DB 任務必含 `dbml:Table …` 或 `dbml:Note:…`；前端必含 `ui-plan:…` 和／或 `prototype:…`；Setup／Foundational／受 research 驅動的後端任務須含對應 `research:{決策小節}`。
-- 禁止僅寫「讀 http-api.yaml」而不列 operationId／path。
+- 每個 User Story 依 testplan 分組；所有 testplan TP ID 至少出現在一項 task 的 `testplan:TP-xxx` 錨點中。
+- 每個行為任務恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]` 標籤；多步驟工作必須拆成多項任務。
+- 無 TDD 標籤的非行為任務須標 `[NON-TDD]` 並說明原因；不得將產品行為實作標為 NON-TDD。
+- `####` 小節須有必讀對照表，且每列至少由一個任務的 `←` 錨點引用；各 T 任務至少引用一個機器錨點。
+- 後端 HTTP 任務引用 `openapi:`；持久化任務引用 `dbml:`；前端任務引用 `ui-plan:`／`prototype:`；spec 追溯使用 `spec:`。
+- RED task 對應 testplan 案例的測試入口；GREEN／REFACTOR task 引用同一 TP 案例，不得改寫案例意圖。
+
+Constitution self-check: pass

@@ -373,13 +373,45 @@ components:
     PayOrderRequest:
       type: object
       additionalProperties: false
+      description: 金額欄位僅為相容性欄位，伺服器一律忽略並使用訂單快照。
       properties:
         simulate_outcome:
           type: string
           enum:
             - success
             - failure
-          description: 僅非 production 且伺服器允許時生效；不得含 total 或 items。
+          description: 僅非 production 且伺服器允許時生效。
+        total_amount:
+          type: string
+          description: 由伺服器忽略，不作為應付金額依據。
+        unit_price:
+          type: string
+          description: 由伺服器忽略，不作為應付金額依據。
+        line_total:
+          type: string
+          description: 由伺服器忽略，不作為應付金額依據。
+        items:
+          type: array
+          description: 由伺服器忽略，不作為應付金額依據。
+          items:
+            type: object
+            properties:
+              menu_item_id:
+                type: string
+              menu_item_name:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+              line_total:
+                type: string
+              options:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+            additionalProperties: false
 
     CancelOrderRequest:
       type: object
@@ -389,6 +421,38 @@ components:
     MerchantOrderActionRequest:
       type: object
       additionalProperties: false
+      description: 可提交相容性金額欄位；伺服器忽略欄位並保留訂單快照。
+      properties:
+        total:
+          type: string
+        total_amount:
+          type: string
+        unit_price:
+          type: string
+        line_total:
+          type: string
+        items:
+          type: array
+          description: 由伺服器忽略。
+          items:
+            type: object
+            properties:
+              menu_item_id:
+                type: string
+              menu_item_name:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+              line_total:
+                type: string
+              options:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+            additionalProperties: false
 
     MerchantOrderSummary:
       type: object

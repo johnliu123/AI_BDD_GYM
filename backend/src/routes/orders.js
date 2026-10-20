@@ -8,7 +8,8 @@ import { logServerError } from '../utils/safeLogger.js';
 
 const router = express.Router();
 
-const IGNORED_CLIENT_AMOUNT_KEYS = new Set(['total_amount']);
+const IGNORED_CLIENT_AMOUNT_KEYS = new Set(['total_amount', 'unit_price', 'line_total']);
+const IGNORED_CLIENT_DETAIL_KEYS = new Set(['items']);
 
 function validateCreateOrderBody(body) {
   if (body === undefined || body === null) {
@@ -34,6 +35,7 @@ function validatePayOrderBody(body) {
   return keys.every(
     (key) =>
       IGNORED_CLIENT_AMOUNT_KEYS.has(key)
+      || (IGNORED_CLIENT_DETAIL_KEYS.has(key) && Array.isArray(body.items))
       || (key === 'simulate_outcome'
         && (body.simulate_outcome === 'success' || body.simulate_outcome === 'failure'))
   );
@@ -45,7 +47,7 @@ function isOrderWritePost(req) {
   if (req.method !== 'POST') {
     return false;
   }
-  const path = req.path || '';
+  const path = (req.originalUrl || req.path || '').split('?')[0];
   return path === '/api/orders' || /\/pay$/.test(path) || /\/cancel$/.test(path);
 }
 

@@ -51,4 +51,4 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 3. THINK 各端點分析產物須含受派 skill 回報的 `Constitution self-check`；缺漏視為該產物未完成。
 4. EXEC **Phase Self-check**（artifact=`plan.md`）。
 5. WRITE 回報 `plan.md` 路徑、端點至 Skill 的委派對照、Wave 執行狀態、各分析產物路徑與其 Constitution self-check、未完成工作、待確認事項或失敗原因，以及本 skill 對 `plan.md` 的 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
-6. WRITE 建議下一指令：預設 **`/tasks`**（主流程見 `../../references/sdd-primary-workflow.md`）。
+6. WRITE 建議下一指令：預設 **`/testplan`**（主流程見 `../../references/sdd-primary-workflow.md`）；testplan 完成後再由 `/tasks` 依 TP 案例切分任務。

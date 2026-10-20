@@ -13,6 +13,14 @@ import {
 import { logServerError } from '../utils/safeLogger.js';
 
 const router = express.Router();
+const ADD_ITEM_FIELDS = new Set(['menu_item_id', 'quantity', 'menu_item_option_ids']);
+
+function hasOnlyFields(body, allowedFields) {
+  return body !== null
+    && typeof body === 'object'
+    && !Array.isArray(body)
+    && Object.keys(body).every((key) => allowedFields.has(key));
+}
 
 router.use('/api/cart', attachGuestSession);
 
@@ -41,6 +49,14 @@ router.get('/api/cart', async (req, res, next) => {
 
 router.post('/api/cart/items', async (req, res, next) => {
   try {
+    if (!hasOnlyFields(req.body, ADD_ITEM_FIELDS)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_REQUEST_BODY',
+          message: '請求 body 含有不允許的欄位。',
+        },
+      });
+    }
     const cartState = await addCartItem(req.sessionID, req.body || {});
     res.status(201).json({
       cart: { items: cartState.items, total: cartState.total },
@@ -57,6 +73,14 @@ router.post('/api/cart/items', async (req, res, next) => {
 
 router.patch('/api/cart/items/:itemId', async (req, res, next) => {
   try {
+    if (!hasOnlyFields(req.body, new Set(['quantity']))) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_REQUEST_BODY',
+          message: '請求 body 含有不允許的欄位。',
+        },
+      });
+    }
     const nextQuantity = Number(req.body?.quantity);
     const cartState = await updateCartItem(req.sessionID, req.params.itemId, nextQuantity);
     res.json({

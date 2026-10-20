@@ -40,6 +40,16 @@ test('POST cancel succeeds for created unpaid order', async () => {
   assert.equal(cancelled.body.order.total, snapshotTotal);
 });
 
+test('POST cancel preserves failed payment status', async () => {
+  const { session, orderNumber } = await createUnpaidOrder();
+  await forceOrderPaymentStatus(orderNumber, session.cookie, 'failed', new Date().toISOString());
+
+  const cancelled = await postCancelOrder(app, session, orderNumber);
+  assert.equal(cancelled.status, 200);
+  assert.equal(cancelled.body.order.status, 'cancelled');
+  assert.equal(cancelled.body.order.payment_status, 'failed');
+});
+
 test('POST cancel returns 409 ORDER_NOT_CANCELLABLE after accept', async () => {
   const { session, orderNumber } = await createUnpaidOrder();
   const accept = await merchantPost(app, `/api/merchant/orders/${orderNumber}/accept`);
@@ -90,6 +100,30 @@ test('POST pay returns 409 ORDER_CANCELLED after cancel', async () => {
   const attempt = await postPayOrder(app, session, orderNumber);
   assert.equal(attempt.status, 409);
   assert.equal(attempt.body.error.code, 'ORDER_CANCELLED');
+});
+
+test('POST cancel returns 404 for an order owned by another session', async () => {
+  const { orderNumber } = await createUnpaidOrder();
+  const foreignSession = await bootstrapCartSession(app);
+
+  const attempt = await postCancelOrder(app, foreignSession, orderNumber);
+  assert.equal(attempt.status, 404);
+  assert.equal(attempt.body.error.code, 'ORDER_NOT_FOUND');
+});
+
+test('POST cancel rejects a second cancellation without changing the snapshot', async () => {
+  const { session, orderNumber, snapshotTotal } = await createUnpaidOrder();
+  const first = await postCancelOrder(app, session, orderNumber);
+  const cancelledAt = first.body.order.cancelled_at;
+  assert.equal(first.status, 200);
+
+  const second = await postCancelOrder(app, session, orderNumber);
+  assert.equal(second.status, 409);
+  assert.equal(second.body.error.code, 'ORDER_CANCELLED');
+  const current = await getOrderForSession(app, session, orderNumber);
+  assert.equal(current.body.order.cancelled_at, cancelledAt);
+  assert.equal(current.body.order.total, snapshotTotal);
+  assert.equal(current.body.order.items.length, 1);
 });
 
 test('cancel preserves line snapshot total', async () => {

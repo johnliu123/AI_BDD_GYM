@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { getPool } from '../config/db.js';
+import { withTransaction } from './cartRepository.js';
 
 const SQL = {
   listCategories:
@@ -251,10 +252,8 @@ export async function createMenuItemRecord(payload, client = getPool()) {
     throw error;
   }
 
-  const connection = await client.connect();
-  try {
-    await connection.query('BEGIN');
-    const id = crypto.randomUUID();
+  const id = crypto.randomUUID();
+  await withTransaction(async (connection) => {
     await connection.query(SQL.insertItem, [
       id,
       payload.category_id,
@@ -264,15 +263,9 @@ export async function createMenuItemRecord(payload, client = getPool()) {
       payload.is_active !== false,
     ]);
     await replaceOptionTree(connection, id, payload.option_groups || []);
-    await connection.query('COMMIT');
-    await refreshMenuCatalog(client);
-    return getMenuItemById(id);
-  } catch (error) {
-    await connection.query('ROLLBACK');
-    throw error;
-  } finally {
-    connection.release();
-  }
+  }, client);
+  await refreshMenuCatalog(client);
+  return getMenuItemById(id);
 }
 
 export async function updateMenuItemRecord(menuItemId, payload, client = getPool()) {
@@ -296,9 +289,7 @@ export async function updateMenuItemRecord(menuItemId, payload, client = getPool
     }
   }
 
-  const connection = await client.connect();
-  try {
-    await connection.query('BEGIN');
+  await withTransaction(async (connection) => {
     await connection.query(SQL.updateItem, [
       menuItemId,
       categoryId,
@@ -310,15 +301,9 @@ export async function updateMenuItemRecord(menuItemId, payload, client = getPool
     if (payload.option_groups) {
       await replaceOptionTree(connection, menuItemId, payload.option_groups);
     }
-    await connection.query('COMMIT');
-    await refreshMenuCatalog(client);
-    return getMenuItemById(menuItemId);
-  } catch (error) {
-    await connection.query('ROLLBACK');
-    throw error;
-  } finally {
-    connection.release();
-  }
+  }, client);
+  await refreshMenuCatalog(client);
+  return getMenuItemById(menuItemId);
 }
 
 export async function patchMenuItemAvailability(menuItemId, isActive, client = getPool()) {

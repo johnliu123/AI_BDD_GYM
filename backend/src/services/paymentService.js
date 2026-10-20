@@ -1,5 +1,6 @@
 import { getPool } from '../config/db.js';
 import {
+  deleteExpiredPaymentIdempotencyKey,
   findPaymentIdempotencyOrderId,
   insertPaymentIdempotencyKey,
 } from '../repositories/paymentIdempotencyRepository.js';
@@ -142,6 +143,7 @@ export async function payOrderForSession(sessionId, orderNumber, { idempotencyKe
         if (orderId) {
           const expiresAt = new Date(Date.now() + idempotencyTtlMs()).toISOString();
           try {
+            await deleteExpiredPaymentIdempotencyKey(sessionId, idempotencyKey, client);
             await insertPaymentIdempotencyKey(sessionId, idempotencyKey, orderId, expiresAt, client);
           } catch (error) {
             if (isDuplicateIdempotencyKeyError(error)) {

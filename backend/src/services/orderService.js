@@ -3,6 +3,7 @@ import { loadCartRows, lockCartForSession } from '../repositories/cartRepository
 import { buildCartState } from './cartPricing.js';
 import {
   clearCartItemsForSession,
+  deleteExpiredIdempotencyKey,
   findIdempotencyOrderId,
   insertIdempotencyKey,
   insertOrderHeader,
@@ -137,6 +138,7 @@ export async function createOrderFromCart(sessionId, idempotencyKey) {
           }
           await clearCartItemsForSession(sessionId, client);
           if (idempotencyKey) {
+            await deleteExpiredIdempotencyKey(sessionId, idempotencyKey, client);
             const expiresAt = new Date(Date.now() + idempotencyTtlMs()).toISOString();
             await insertIdempotencyKey(sessionId, idempotencyKey, orderId, expiresAt, client);
           }

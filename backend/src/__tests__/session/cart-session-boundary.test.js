@@ -163,6 +163,19 @@ test('POST /api/cart/items rejects invalid or missing Origin', async () => {
   assert.equal(missingOrigin.status, 403);
   assert.equal(invalidOrigin.status, 403);
 
+  const invalidCsrf = await request(app)
+    .post('/api/cart/items')
+    .set('Origin', 'http://localhost:5173')
+    .set('Cookie', `guest_session=${cookie}`)
+    .set('X-CSRF-Token', 'invalid-token')
+    .send({
+      menu_item_id: item.id,
+      quantity: 1,
+      menu_item_option_ids: selectedOptionIds,
+    });
+  assert.equal(invalidCsrf.status, 403);
+  assert.equal(invalidCsrf.body.error.code, 'INVALID_CSRF_TOKEN');
+
   const allowedReferer = await request(app)
     .post('/api/cart/items')
     .set('Referer', 'http://localhost:5173/')

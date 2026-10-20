@@ -5,6 +5,7 @@ import {
   addSampleCartItem,
   bootstrapCartSession,
   countPaymentIdempotencyKeys,
+  expirePaymentIdempotencyKey,
   postCreateOrder,
   postPayOrder,
 } from '../testHelpers.js';
@@ -94,6 +95,30 @@ test('Idempotency-Key replays paid result without duplicate keys', async () => {
   assert.equal(replay.body.order.order_number, orderNumber);
   assert.equal(replay.body.order.payment_status, 'paid');
   assert.equal(await countPaymentIdempotencyKeys(), 1);
+});
+
+test('expired payment idempotency key can be reused for a new order', async () => {
+  const session = await bootstrapCartSession(app);
+  const before = await countPaymentIdempotencyKeys();
+  await addSampleCartItem(app, session);
+  const firstOrder = await postCreateOrder(app, session);
+  await addSampleCartItem(app, session);
+  const secondOrder = await postCreateOrder(app, session);
+  const key = 'pay-idem-expired';
+
+  const firstPayment = await postPayOrder(app, session, firstOrder.body.order.order_number, {
+    idempotencyKey: key,
+  });
+  assert.equal(firstPayment.status, 200);
+  await expirePaymentIdempotencyKey(session.cookie, key);
+
+  const secondPayment = await postPayOrder(app, session, secondOrder.body.order.order_number, {
+    idempotencyKey: key,
+  });
+  assert.equal(secondPayment.status, 200);
+  assert.equal(secondPayment.body.order.order_number, secondOrder.body.order.order_number);
+  assert.equal(secondPayment.body.order.payment_status, 'paid');
+  assert.equal(await countPaymentIdempotencyKeys(), before + 1);
 });
 
 test('Idempotency-Key on different order_number returns 409 IDEMPOTENCY_KEY_ORDER_MISMATCH', async () => {

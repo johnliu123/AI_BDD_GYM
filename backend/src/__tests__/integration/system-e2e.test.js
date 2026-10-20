@@ -5,6 +5,7 @@ import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   addSampleCartItem,
   bootstrapCartSession,
+  getOrderForSession,
   merchantPost,
   postCreateOrder,
   postPayOrder,
@@ -52,22 +53,42 @@ test('idempotent create order replays same order number', async () => {
   assert.equal(second.body.order.order_number, first.body.order.order_number);
 });
 
-test('create order ignores tampered total_amount in body', async () => {
+test('create order ignores client amount fields and persists only server totals', async () => {
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
-  const created = await postCreateOrder(app, session, { body: { total_amount: '0.01' } });
+  const created = await postCreateOrder(app, session, {
+    body: { total_amount: '0.01', unit_price: '0.01', line_total: '0.01' },
+  });
   assert.equal(created.status, 201);
   assert.equal(created.body.order.total, '220.00');
+  const persisted = await getOrderForSession(app, session, created.body.order.order_number);
+  assert.equal(persisted.body.order.total, '220.00');
+  assert.equal(persisted.body.order.items[0].unit_price, '220.00');
+  assert.equal(persisted.body.order.items[0].line_total, '220.00');
 });
 
-test('pay ignores tampered total_amount in body', async () => {
+test('pay ignores client amount fields and preserves the persisted snapshot', async () => {
   const session = await bootstrapCartSession(app);
   await addSampleCartItem(app, session);
   const created = await postCreateOrder(app, session);
   const orderNumber = created.body.order.order_number;
-  const pay = await postPayOrder(app, session, orderNumber, { body: { total_amount: '0.01' } });
+  const pay = await postPayOrder(app, session, orderNumber, {
+    body: {
+      total_amount: '0.01',
+      unit_price: '0.01',
+      line_total: '0.01',
+      items: [{ menu_item_id: 'fake', menu_item_name: '偽造餐點', quantity: 99, line_total: '0.01' }],
+    },
+  });
   assert.equal(pay.status, 200);
+  assert.equal(pay.body.order.payment_status, 'paid');
   assert.equal(pay.body.order.total, '220.00');
+  assert.equal(pay.body.order.items[0].unit_price, '220.00');
+  assert.equal(pay.body.order.items[0].line_total, '220.00');
+  const persisted = await getOrderForSession(app, session, orderNumber);
+  assert.equal(persisted.body.order.total, '220.00');
+  assert.equal(persisted.body.order.items[0].unit_price, '220.00');
+  assert.equal(persisted.body.order.items[0].line_total, '220.00');
 });
 
 test('sold-out item blocks order create', async () => {

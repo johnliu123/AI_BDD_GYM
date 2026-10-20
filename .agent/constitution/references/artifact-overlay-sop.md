@@ -45,6 +45,7 @@
 | ui-plan | prototype/ | `.agent/constitution/skills/ui-plan/prototype.md` |
 | data-plan | data-model.dbml | `.agent/constitution/skills/data-plan/data-model.dbml` |
 | api-plan | http-api.yaml | `.agent/constitution/skills/api-plan/http-api.yaml` |
+| testplan | testplan.md | `.agent/constitution/skills/testplan/testplan.md` |
 | tasks | tasks.md | `.agent/constitution/skills/tasks/tasks.md` |
 
 `/implement` 不在 registry 內。

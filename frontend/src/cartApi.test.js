@@ -51,6 +51,25 @@ test('shares the bootstrap request to avoid creating competing sessions', async 
   assert.equal(calls, 1);
 });
 
+test('fetches fresh cart state after the shared bootstrap request completes', async () => {
+  let calls = 0;
+  const api = createCartApi(async () => {
+    calls += 1;
+    return jsonResponse({
+      cart: { items: [], total: calls === 1 ? '0.00' : '220.00' },
+      csrf_token: 'stable-token',
+    });
+  });
+
+  const [first, concurrent] = await Promise.all([api.getCart(), api.getCart()]);
+  const refreshed = await api.getCart();
+
+  assert.equal(calls, 2);
+  assert.equal(first.cart.total, '0.00');
+  assert.equal(concurrent.cart.total, '0.00');
+  assert.equal(refreshed.cart.total, '220.00');
+});
+
 test('maps update and delete operations to the item endpoint', async () => {
   const calls = [];
   const api = createCartApi(async (url, options) => {

@@ -135,7 +135,7 @@ paths:
       description: |
         **需求追溯**：User Story 2；FR-004–FR-006、FR-013、FR-015；SC-002。
 
-        Body 可為空 `{}`；`additionalProperties: false`。忽略任何金額或明細欄位。
+        Body 可為空 `{}`。僅允許下列相容性欄位；伺服器忽略所有欄位，狀態操作不得變更訂單快照。
       parameters:
         - in: header
           name: X-Merchant-Token
@@ -320,6 +320,41 @@ components:
     MerchantOrderActionRequest:
       type: object
       additionalProperties: false
+      properties:
+        total:
+          type: string
+          description: 由伺服器忽略。
+        total_amount:
+          type: string
+          description: 由伺服器忽略。
+        unit_price:
+          type: string
+          description: 由伺服器忽略。
+        line_total:
+          type: string
+          description: 由伺服器忽略。
+        items:
+          type: array
+          description: 由伺服器忽略。
+          items:
+            type: object
+            properties:
+              menu_item_id:
+                type: string
+              menu_item_name:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+              line_total:
+                type: string
+              options:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+            additionalProperties: false
       description: 空物件；不得提交 total、items 等欄位。
 
     MerchantOrderSummary:

@@ -5,6 +5,7 @@ import {
   isOptionSelectionComplete,
   loadMenuData,
   loadPublicMenuItems,
+  menuItemDisplayFields,
 } from './menuApi.js';
 
 function jsonResponse(body, ok = true) {
@@ -49,6 +50,19 @@ test('returns an empty menu when both API responses succeed with empty arrays', 
   );
 
   assert.deepEqual(data, { categories: [], items: [] });
+});
+
+test('menu item display fields preserve data and provide explicit missing-value fallbacks', () => {
+  assert.deepEqual(menuItemDisplayFields({ image_url: null, price: null, category_name: null }), {
+    imageUrl: null,
+    priceLabel: '暫無價格',
+    categoryLabel: '暫無分類',
+  });
+  assert.deepEqual(menuItemDisplayFields({ image_url: '/meal.jpg', price: '12.50', category_name: '餐點' }), {
+    imageUrl: '/meal.jpg',
+    priceLabel: 'NT$ 12.50',
+    categoryLabel: '餐點',
+  });
 });
 
 test('passes an abort signal to both API requests and rejects when cancelled', async () => {

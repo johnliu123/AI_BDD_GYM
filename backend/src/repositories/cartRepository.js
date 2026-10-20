@@ -86,8 +86,8 @@ export async function insertCartItem(sessionId, itemPayload, client = getPool())
   return itemId;
 }
 
-export async function withTransaction(work) {
-  const client = await getPool().connect();
+export async function withTransaction(work, pool = getPool()) {
+  const client = await pool.connect();
   const usesMssql = typeof client.commit === 'function';
   try {
     if (!usesMssql) {

@@ -83,6 +83,27 @@ test('invalid create body returns 400', async () => {
   assert.equal(response.status, 400);
 });
 
+test('invalid menu price is rejected without creating an item', async () => {
+  const response = await merchantPost(app, '/api/merchant/menu-items', {
+    body: { name: '錯誤價格餐點', price: 'not-money', category_id: 'cat-1' },
+  });
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error.code, 'INVALID_REQUEST_BODY');
+  const menu = await request(app).get('/api/menu-items');
+  assert.equal(menu.body.items.some((item) => item.name === '錯誤價格餐點'), false);
+});
+
+test('duplicate category name returns 409 and preserves the original category', async () => {
+  const existing = await request(app).get('/api/categories');
+  const name = existing.body.categories[0].name;
+  const duplicate = await merchantPost(app, '/api/merchant/categories', { body: { name } });
+
+  assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.body.error.code, 'DUPLICATE_CATEGORY_NAME');
+  const after = await request(app).get('/api/categories');
+  assert.equal(after.body.categories.filter((category) => category.name === name).length, 1);
+});
+
 test('delete category with items returns 409 CATEGORY_IN_USE', async () => {
   const response = await request(app)
     .delete('/api/merchant/categories/cat-1')

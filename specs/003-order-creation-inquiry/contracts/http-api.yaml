@@ -186,7 +186,17 @@ components:
     CreateOrderRequest:
       type: object
       additionalProperties: false
-      description: 本迭代無必填 body 欄位；僅允許空物件。不得提交 total、line_total、unit_price 等金額或訂單欄位。
+      description: 無必填 body 欄位。total_amount、unit_price、line_total 僅為相容性欄位，伺服器一律忽略並依購物車計價；其他額外欄位拒絕。
+      properties:
+        total_amount:
+          type: string
+          description: 由伺服器忽略，不作為計價依據。
+        unit_price:
+          type: string
+          description: 由伺服器忽略，不作為計價依據。
+        line_total:
+          type: string
+          description: 由伺服器忽略，不作為計價依據。
 
     OrderResponse:
       type: object

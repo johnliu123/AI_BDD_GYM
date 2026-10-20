@@ -28,11 +28,38 @@ test('invalid JSON body returns 400 INVALID_REQUEST_BODY', async () => {
   assert.equal(response.body.error.code, 'INVALID_REQUEST_BODY');
 });
 
-test('internal error returns 500 without stack in body', async () => {
-  const response = await request(app).get('/api/_test/internal-error');
+test('internal error is sanitized, logged locally, and makes no remote call', async () => {
+  const originalConsoleError = console.error;
+  const originalFetch = globalThis.fetch;
+  const logLines = [];
+  let remoteCalls = 0;
+  console.error = (line) => logLines.push(String(line));
+  globalThis.fetch = async () => {
+    remoteCalls += 1;
+    throw new Error('unexpected remote call');
+  };
+  let response;
+  try {
+    response = await request(app)
+      .get('/api/_test/internal-error')
+      .query({ message: 'SELECT * FROM private_table password=hidden C:\\private\\service.js' });
+  } finally {
+    console.error = originalConsoleError;
+    globalThis.fetch = originalFetch;
+  }
+
   assert.equal(response.status, 500);
   assert.equal(response.body.error.code, 'INTERNAL_ERROR');
+  assert.equal(response.body.error.message, '伺服器錯誤');
+  assert.equal(JSON.stringify(response.body).includes('SELECT'), false);
+  assert.equal(JSON.stringify(response.body).includes('hidden'), false);
+  assert.equal(JSON.stringify(response.body).includes('service.js'), false);
   assert.equal(response.body.error.stack, undefined);
+  assert.equal(logLines.length, 1);
+  assert.match(logLines[0], /http\.unhandled/);
+  assert.match(logLines[0], /SELECT \* FROM private_table/);
+  assert.match(logLines[0], /password=\[REDACTED\]/);
+  assert.equal(remoteCalls, 0);
 });
 
 test('ORDER_STATUS_CONFLICT still returned for illegal transition', async () => {

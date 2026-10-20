@@ -48,6 +48,27 @@ test('POST /api/cart/items rejects unknown option ids without mutating cart', as
   assert.equal(read.body.cart.items.length, 0);
 });
 
+test('POST /api/cart/items rejects client-supplied amounts without mutating cart', async () => {
+  const session = await bootstrapCartSession(app);
+  const response = await request(app)
+    .post('/api/cart/items')
+    .set(session.headers)
+    .send({
+      menu_item_id: 'item-1',
+      quantity: 1,
+      menu_item_option_ids: ['opt-1', 'opt-4'],
+      unit_price: '0.01',
+      line_total: '0.01',
+      total_amount: '0.01',
+    });
+
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error.code, 'INVALID_REQUEST_BODY');
+  const read = await request(app).get('/api/cart').set('Cookie', session.headers.Cookie);
+  assert.deepEqual(read.body.cart.items, []);
+  assert.equal(read.body.cart.total, '0.00');
+});
+
 test('POST /api/cart/items adds item with 201 and BR-001 pricing', async () => {
   const menuResponse = await request(app).get('/api/menu-items');
   const item = pickMenuItemWithGroups(menuResponse.body.items);

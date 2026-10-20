@@ -38,6 +38,30 @@ test('orders-only cannot POST menu item', async () => {
   assert.equal(response.status, 403);
 });
 
+test('orders-only token cannot use a client-supplied admin role to write menu data', async () => {
+  const savedToken = process.env.MERCHANT_TOKEN;
+  const savedCredentials = process.env.MERCHANT_CREDENTIALS;
+  process.env.MERCHANT_CREDENTIALS = JSON.stringify([
+    { token: MERCHANT_ORDERS_ONLY_TOKEN, roles: ['orders'] },
+  ]);
+  delete process.env.MERCHANT_TOKEN;
+  try {
+    const response = await request(app)
+      .post('/api/merchant/menu-items')
+      .set('X-Merchant-Token', MERCHANT_ORDERS_ONLY_TOKEN)
+      .set('X-Merchant-Role', 'admin')
+      .send({ name: '不應建立', price: '1.00', category_id: 'cat-1' });
+
+    assert.equal(response.status, 403);
+    assert.equal(response.body.error.code, 'MERCHANT_FORBIDDEN');
+    const menu = await request(app).get('/api/menu-items');
+    assert.equal(menu.body.items.some((item) => item.name === '不應建立'), false);
+  } finally {
+    process.env.MERCHANT_TOKEN = savedToken;
+    process.env.MERCHANT_CREDENTIALS = savedCredentials;
+  }
+});
+
 test('menu-only cannot accept order', async () => {
   const session = await bootstrapCartSession(app);
   const created = await createSampleOrder(app, session);
@@ -87,3 +111,4 @@ test('client role header is ignored', async () => {
     .set('X-Merchant-Role', 'admin');
   assert.equal(response.status, 200);
 });
+

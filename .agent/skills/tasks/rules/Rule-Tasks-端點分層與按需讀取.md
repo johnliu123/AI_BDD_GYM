@@ -1,8 +1,11 @@
-# Rule 1 - User Story 內必須依 plan 端點分第二層
+# Rule 1 - User Story 內依 plan 端點分第二層並保持 TDD 順序
 
 - Level: `MUST`
-- Phase 3 起每個 User Story 階段，在「Tests／Implementation」下必須至少有 **前端**、**後端** 兩個 `####` 小節；`plan.md` 若盤點其他端點（如僅資料、僅 infra），可增列對應小節，但不得把不同 codebase 的任務混在同一小節。
+- Phase 3 起每個 User Story 下，依該故事實際有任務的端點建立 `#### 前端`、`#### 後端` 或其他明確端點小節；不要求建立無任務的空小節，不得把不同 codebase 的任務混在同一小節。
 - 任務須落在實際會修改的 codebase 路徑下（如 `frontend/`、`backend/`）。
+- 同一 TP 案例的 RED、GREEN、REFACTOR 任務須依 T 編號與依賴順序排列；不得要求所有故事先完成 RED 才能開始 GREEN。
+- 每個行為任務只執行一個 TDD 步驟，恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]` 標籤；需要多步驟時拆成多個 task。純文件／環境等非行為任務標 `[NON-TDD]` 並說明原因。
+- 所有行為任務必須追溯到 `testplan.md` 案例；每個 TP 案例至少被一項 task 引用 `testplan:TP-xxx`。
 
 # Rule 2 - Spec 套件索引與按需讀取
 
@@ -22,6 +25,7 @@
 - **人讀**：Markdown 標題路徑、User Story 名、驗收情境、設計決策條目等。
 - **機器錨點**（至少填一類，可多個以 `;` 分隔）：
   - `spec:FR-001` / `spec:US1` / `spec:US1·情境2`
+  - `testplan:TP-001`
   - `plan:設計決策·{關鍵字}` / `plan:端點盤點`
   - `research:{決策小節}`（對應 `research.md`「決策摘要」下 `###` 標題，如 `research:照片持久化`）
   - `techstack:{領域列}`（如 `techstack:backend`）
@@ -50,6 +54,8 @@
 - Level: `MUST`
 - 每個任務行（`- [ ] Tnnn`）結尾必須有 **`←`** 後接至少一個機器錨點（與必讀對照表同語法），例如：  
   `← openapi:importPhoto; dbml:Table photos`
+- 每個行為任務行須含唯一 TDD 步驟標籤，且至少有一個 `testplan:TP-xxx` 錨點；非行為任務用 `[NON-TDD]` 並說明原因，可不引用 TP 案例。
+- 必須確認 testplan 中每個 TP ID 至少由一項 task 追溯；不得產生未經 testplan 規劃的行為任務。
 - 必讀對照表中的**每一列**，至少被本小節**一個**任務行的 `←` 引用（雙向覆蓋：無孤兒列、無無錨點任務）。
 - Setup／Foundational／Polish 任務同樣須帶 `←`（可引用 `research:`、`techstack:`、`plan:`、`dbml:` 等）。
 - 若 User Story 需求在 spec 中存在，但 openapi／dbml／ui-plan **找不到對應錨點**，不得發明任務；先補分析產物或 `/clarify`。

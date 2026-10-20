@@ -50,6 +50,22 @@ test('POST accept on non-created order returns 409', async () => {
   assert.equal(again.body.error.code, 'ORDER_STATUS_CONFLICT');
 });
 
+test('parallel accept requests allow only one state transition', async () => {
+  const session = await bootstrapCartSession(app);
+  const created = await createSampleOrder(app, session);
+  const orderNumber = created.body.order.order_number;
+
+  const [first, second] = await Promise.all([
+    merchantPost(app, `/api/merchant/orders/${orderNumber}/accept`),
+    merchantPost(app, `/api/merchant/orders/${orderNumber}/accept`),
+  ]);
+  assert.deepEqual([first.status, second.status].sort(), [200, 409]);
+  const accepted = [first, second].find((response) => response.status === 200);
+  const conflict = [first, second].find((response) => response.status === 409);
+  assert.equal(accepted.body.order.status, 'accepted');
+  assert.equal(conflict.body.error.code, 'ORDER_STATUS_CONFLICT');
+});
+
 test('POST accept ignores junk amount fields in body', async () => {
   const session = await bootstrapCartSession(app);
   const created = await createSampleOrder(app, session);

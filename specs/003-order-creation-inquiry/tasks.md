@@ -1,171 +1,142 @@
-# 任務：點餐系統第三迭代－訂單建立與查詢
+# Tasks: 點餐系統第三迭代－訂單建立與查詢
 
-**輸入**：設計文件位於 `specs/003-order-creation-inquiry/`
+**Feature directory**：`specs/003-order-creation-inquiry/`
 
-**Spec 套件索引**（按需 READ；執行到對應 Phase／小節再載入，勿一次讀完）：
+**Retroactive mapping note**：本 feature 舊行為 tasks 均已完成。本次保留既有 `[x]`，依 testplan TP 案例把測試與行為實作切成單步 RED／GREEN 對照；標籤不代表歷史執行時序證明。TP-006 金額相容欄位政策已於 contract／plan 對齊，T013 已完成並有整合測試證據。
+
+**Spec 套件索引**（按需 READ）：
 
 | 文件 | 用途 |
 |---|---|
-| `spec.md` | 功能需求、User Story、驗收情境、商業規則與成功標準 |
-| `research.md` | 訂單交易、快照、冪等、訂單編號與查詢授權 |
-| `plan.md` | 專案結構、端點盤點、設計決策 |
-| `techstack.md` | MSSQL 訂單表、API 端點、session 延續 |
-| `ui-plan.md` · `prototype/` | 確認送單、成功頁、查詢流程 |
-| `data-model.dbml` | orders、明細、冪等鍵 |
-| `contracts/http-api.yaml` | `createOrder`、`getOrder` |
+| `spec.md` | US1–US2、FR／BR／SC、冪等澄清 |
+| `testplan.md` | TP-001–TP-013 案例與測試入口 |
+| `research.md`、`techstack.md` | 訂單 transaction、快照、session、冪等決策 |
+| `plan.md` | endpoint inventory、transaction boundary、order number policy |
+| `ui-plan.md`、`prototype/` | checkout、order success、lookup flow |
+| `data-model.dbml` | orders、order items/options、idempotency keys |
+| `contracts/http-api.yaml` | `createOrder`／`getOrder`；002 cart contract 為前置 |
 
-**組織方式**：階段 3 起依使用者故事分組；故事內以 **#### 前端／後端** 作為第二層。
+## Phase 1: Setup
 
-## 階段 1：前置作業
+**Purpose**：核對 002 cart/session/money 前置；不新增訂單行為。
 
-**目的**：確認 002 購物車／session／計價能力可作為訂單建立基礎；核對本迭代契約與研究決策。
-
-**執行本階段時讀取**：`research.md`、`techstack.md`、`plan.md`。
+**Read when executing this phase**：`research.md`、`techstack.md`、`plan.md`、`testplan.md`。
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | 全域 FR-010、FR-011 | `spec:FR-010`; `spec:FR-011` | session 綁定與伺服器快照計價 |
-| `research.md` | 延續既有前後端、訂單金額快照 | `research:延續既有前後端與訪客工作階段`; `research:訂單金額快照與查詢權威` | 重用 cart／money 路徑 |
-| `techstack.md` | API 後端、資料庫 | `techstack:API 後端`; `techstack:資料庫` | MSSQL + Express 延續 |
-| `plan.md` | 端點盤點、設計決策 | `plan:端點盤點`; `plan:設計決策·訂單編號` | 訂單 API 邊界 |
-| `../002-shopping-cart-total-calculation/contracts/http-api.yaml` | cart CSRF bootstrap | `openapi:getCart`; `openapi:components.schemas.ErrorBody` | 寫入訂單沿用 CSRF |
+| `testplan.md` | test environment、TP-001／TP-008 | `testplan:TP-001`; `testplan:TP-008` | memory DB、guest session／CSRF 前置 |
+| `techstack.md` | 003 前置、test command | `techstack:API 後端`; `techstack:資料庫` | 延用 002 harness 與 server tools |
+| `plan.md` | 端點及 transaction 設計 | `plan:端點盤點`; `plan:設計決策·訂單編號` | order scope |
 
-- [x] T001 在 `backend/src/__tests__/orders/order-prerequisites.test.js` 驗證既有 guest session middleware、`cartService.readCart` 可用性判定與 `money.js` 可產生十進位字串；將 003 依賴 002 的證據摘要寫入 `techstack.md`（新小節「003 前置」）← `spec:FR-010`; `spec:FR-011`; `research:延續既有前後端與訪客工作階段`; `research:訂單金額快照與查詢權威`; `techstack:API 後端`; `techstack:資料庫`; `plan:端點盤點`; `plan:設計決策·訂單編號`; `openapi:getCart`; `openapi:components.schemas.ErrorBody`
-- [x] T002 對照 `contracts/http-api.yaml` 與 `data-model.dbml`，確認 `order_number` 格式、錯誤碼 `CART_EMPTY`／`CART_HAS_UNAVAILABLE_ITEMS`／`ORDER_NOT_FOUND` 與 research 冪等 header 一致； discrepancies 修正契約或 dbml 並記錄於 `plan.md`「T002 契約對齊紀錄」← `openapi:createOrder`; `openapi:getOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.CreateOrderRequest`; `openapi:components.schemas.ErrorBody`; `dbml:Table orders`; `dbml:Table order_idempotency_keys`; `research:冪等鍵與避免重複送單`; `techstack:冪等`; `plan:設計決策·訂單編號`; `spec:US1·情境4`
+- [x] T001 [NON-TDD] 核對既有 guest session、cart read、money helper 與 `USE_MEMORY_DB=1 npm test` 入口；此為前置環境確認，不改產品行為 ← `plan:端點盤點`; `research:延續既有前後端與訪客工作階段`; `techstack:API 後端`; `testplan:TP-001`
 
-**Checkpoint**：T001 通過後才開始訂單 migration 與 API；不得以假 cart 或前端金額建單。
+## Phase 2: Foundational
 
----
-
-## 階段 2：共用基礎
-
-**目的**：訂單 schema、repository、service、路由骨架與前端 order client。
+**Purpose**：保留 order、detail、idempotency persistence 與 transaction foundation。
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `data-model.dbml` | Project Note、`orders`、`order_items`、`order_item_options`、`order_idempotency_keys` | `dbml:Project`; `dbml:Table orders`; `dbml:Table order_items`; `dbml:Table order_item_options`; `dbml:Table order_idempotency_keys` | 交易邊界與 UNIQUE |
-| `contracts/http-api.yaml` | `createOrder`、`getOrder`、`Order` schema | `openapi:createOrder`; `openapi:getOrder`; `openapi:components.schemas.OrderResponse`; `openapi:components.schemas.ErrorBody` | 201／200／404 語意 |
-| `research.md` | 訂單建立交易、冪等、訂單編號 | `research:訂單建立交易與購物車清空`; `research:冪等鍵與避免重複送單`; `research:訂單編號產生` | 單交易建單＋清 cart |
-| `techstack.md` | 資料庫、金額表示 | `techstack:資料庫`; `techstack:金額表示` | DECIMAL + 字串 API |
+| `data-model.dbml` | orders、order_items/options、order_idempotency_keys | `dbml:Table orders`; `dbml:Table order_items`; `dbml:Table order_idempotency_keys` | snapshot 及冪等 mapping |
+| `research.md` | 建單 transaction、冪等、查詢授權 | `research:訂單建立交易與購物車清空`; `research:冪等鍵與避免重複送單`; `research:訂單查詢授權` | 單 transaction／owner-session 查詢 |
+| `contracts/http-api.yaml` | `createOrder`／`getOrder` schemas | `openapi:createOrder`; `openapi:getOrder`; `openapi:components.schemas.Order` | 既有 API contract |
 
-- [x] T003 新增 `backend/src/data/migrations/003_orders.mssql.sql` 及 memory-sql 對應表結構（`memoryDatabase.js`），涵蓋 orders、order_items、order_item_options、order_idempotency_keys ← `dbml:Project`; `dbml:Table orders`; `dbml:Table order_items`; `dbml:Table order_item_options`; `dbml:Table order_idempotency_keys`; `techstack:資料庫`
-- [x] T004 在 `backend/src/repositories/orderRepository.js` 實作依 session 查詢、冪等鍵讀寫、交易內 insert 訂單與刪除 cart 項目 ← `dbml:Project`; `dbml:Table orders`; `dbml:Table order_idempotency_keys`; `research:訂單建立交易與購物車清空`
-- [x] T005 在 `backend/src/services/orderService.js` 實作 `createOrderFromCart(sessionId, idempotencyKey)` 與 `getOrderForSession(sessionId, orderNumber)`：重用 cart 計價、快照名稱／規格、產生 `ORD-*` 編號、拒絕空車／不可用 cart ← `spec:FR-001`; `spec:FR-002`; `spec:FR-003`; `spec:FR-004`; `spec:FR-005`; `spec:FR-006`; `spec:FR-007`; `research:訂單金額快照與查詢權威`; `research:訂單編號產生`; `openapi:createOrder`; `techstack:金額表示`; `dbml:Project`
-- [x] T006 在 `backend/src/routes/orders.js` 註冊 `POST /api/orders`、`GET /api/orders/:order_number`，共用 guest session、Origin、CSRF（POST）；於 `server.js` 掛載 ← `openapi:createOrder`; `openapi:getOrder`; `openapi:getCart`; `techstack:API 後端`; `openapi:components.schemas.ErrorBody`
-- [x] T007 在 `frontend/src/orderApi.js` 實作 create／get mapping（含 `Idempotency-Key`、`X-CSRF-Token`、credentials）；於 `orderApi.test.js` 驗證 request 形狀 ← `openapi:createOrder`; `openapi:getOrder`; `openapi:components.schemas.OrderResponse`; `techstack:前端`
-- [x] T008 在 `sessionMaintenance.js` 或同等 job 新增過期 `order_idempotency_keys` 清理（預設 24h，可 env 覆寫）← `dbml:Table order_idempotency_keys`; `techstack:冪等`; `research:冪等鍵與避免重複送單`
-
-**Checkpoint**：T005–T006 完成後才執行 US1／US2 端對端測試。
+- [x] T002 [NON-TDD] 核對已完成的 003 schema／migration、memory DB table 與 OpenAPI order number／error code；保留原 T002 contract alignment record ← `plan:T002 契約對齊紀錄`; `dbml:Table orders`; `dbml:Table order_idempotency_keys`; `openapi:createOrder`; `openapi:getOrder`
 
 ---
 
-## 階段 3：使用者故事 1－從購物車確認並建立訂單（P1）
+## Phase 3: User Story 1－從購物車確認並建立訂單（P1）
 
-**目標**：有效 session 由可用 cart 建單、冪等、拒絕不可用／空 cart、成功後 cart 空。
+**端點（對齊 plan.md）**：Checkout UI、Orders API、MSSQL、guest session／CSRF、既有 cart service。
 
-**端點**：前端 UI、訂單 API、MSSQL、session／CSRF。
-
-### 使用者故事 1 測試
-
-#### 前端
+#### Backend
 
 **必讀對照**
 
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節須對齊 |
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | US1 情境 1–6、FR-001–FR-007 | `spec:US1`; `spec:US1·情境1`; `spec:US1·情境2`; `spec:US1·情境4`; `spec:FR-001`; `spec:FR-006`; `spec:FR-007` | 成功、拒絕、冪等、清 cart |
-| `ui-plan.md` | §畫面與流程 → 確認送單、拒絕不可用、訂單建立成功 | `ui-plan:§畫面與流程→確認送單`; `ui-plan:§畫面與流程→拒絕不可用購物車送單`; `ui-plan:§畫面與流程→訂單建立成功` | 按鈕與錯誤態 |
-| `prototype/` | `index.html`、`assets/app.js` | `prototype:index.html`; `prototype:assets/app.js` | 雛形流程參照 |
+| `testplan.md` | TP-001–TP-009 | `testplan:TP-001`; `testplan:TP-002`; `testplan:TP-003`; `testplan:TP-004`; `testplan:TP-005`; `testplan:TP-006`; `testplan:TP-007`; `testplan:TP-008`; `testplan:TP-009` | 建單 transaction、拒絕、冪等及安全 |
+| `contracts/http-api.yaml` | `createOrder`, CreateOrderRequest, ErrorBody | `openapi:createOrder`; `openapi:components.schemas.CreateOrderRequest`; `openapi:components.schemas.ErrorBody` | 201／200／400／409／403 behavior |
+| `data-model.dbml` | orders／details／idempotency | `dbml:Table orders`; `dbml:Table order_items`; `dbml:Table order_idempotency_keys` | snapshot、transaction、unique mapping |
 
-- [x] T009 [US1] 在 `frontend/src/orderApi.test.js` 擴充或新建案例：建單 request 含 CSRF／可選 Idempotency-Key；body 為空物件且不含額外金額欄位 ← `spec:US1`; `spec:FR-007`; `spec:FR-011`; `openapi:createOrder`; `openapi:components.schemas.CreateOrderRequest`; `ui-plan:§畫面與流程→確認送單`
+- [x] T003 [US1] [TDD:RED] 為 TP-001 建立 available cart 建單、order number、完整 snapshot 與成功後清 cart 測試 ← `testplan:TP-001`; `spec:FR-001`; `spec:FR-002`; `spec:FR-003`; `spec:FR-006`; `openapi:createOrder`; `dbml:Table orders`; `dbml:Table order_items`
+- [x] T004 [US1] [TDD:GREEN] 實作 TP-001 transaction 建單、快照寫入及清 cart 行為 ← `testplan:TP-001`; `spec:FR-001`; `spec:FR-003`; `spec:FR-006`; `research:訂單建立交易與購物車清空`; `dbml:Table orders`; `dbml:Table order_items`
+- [x] T005 [US1] [TDD:RED] 為 TP-002 建立 mixed unavailable cart 全筆拒絕且 cart 保留測試 ← `testplan:TP-002`; `spec:FR-004`; `spec:BR-002`; `openapi:createOrder`
+- [x] T006 [US1] [TDD:GREEN] 實作 TP-002 建單前 availability revalidation 與 409 error mapping ← `testplan:TP-002`; `spec:FR-004`; `spec:BR-002`; `openapi:createOrder`; `openapi:components.schemas.ErrorBody`
+- [x] T007 [US1] [TDD:RED] 為 TP-003 建立 empty／only-unavailable cart 拒絕測試 ← `testplan:TP-003`; `spec:FR-005`; `openapi:createOrder`
+- [x] T008 [US1] [TDD:GREEN] 實作 TP-003 `CART_EMPTY` refusal 且不寫入 order ← `testplan:TP-003`; `spec:FR-005`; `openapi:createOrder`; `openapi:components.schemas.ErrorBody`
+- [x] T009 [US1] [TDD:RED] 為 TP-004 建立同 session/key 重送回原 order 的測試 ← `testplan:TP-004`; `spec:FR-007`; `spec:BR-003`; `openapi:createOrder`
+- [x] T010 [US1] [TDD:GREEN] 實作 TP-004 order idempotency replay，成功 mapping 唯一且 replay 回 200 ← `testplan:TP-004`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `dbml:Table order_idempotency_keys`
+- [x] T011 [US1] [TDD:RED] 為 TP-005 expired idempotency mapping 視為新請求建立測試 ← `testplan:TP-005`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `openapi:createOrder`
+- [x] T012 [US1] [TDD:GREEN] 實作 TP-005 24h expiry 判斷並允許相同過期 key 新建 order ← `testplan:TP-005`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `dbml:Table order_idempotency_keys`
+- [x] T013 [NON-TDD] 完成 TP-006 契約對齊：明列 `total_amount`、`unit_price`、`line_total` 相容欄位並由伺服器忽略，未知欄位仍拒絕；已更新 OpenAPI／testplan，且整合測試驗證 response 與持久化 snapshot ← `testplan:TP-006`; `spec:US1·情境5`; `spec:FR-011`; `openapi:components.schemas.CreateOrderRequest`; `plan:T002 契約對齊紀錄`
+- [x] T014 [US1] [TDD:RED] 為 TP-007 建立 failed create 不寫成功 idempotency mapping、cart 修正後同 key 可成功測試 ← `testplan:TP-007`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `openapi:createOrder`
+- [x] T015 [US1] [TDD:GREEN] 實作 TP-007 僅在建單成功後持久化 idempotency mapping ← `testplan:TP-007`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `dbml:Table order_idempotency_keys`
+- [x] T016 [US1] [TDD:RED] 為 TP-008 invalid Origin／CSRF 不寫 order、不清 cart 的測試 ← `testplan:TP-008`; `spec:FR-001`; `spec:FR-006`; `002-openapi:components.parameters.OriginHeader`; `002-openapi:components.parameters.CsrfTokenHeader`
+- [x] T017 [US1] [TDD:GREEN] 實作／維持 TP-008 建單沿用 002 session-bound Origin／CSRF guard ← `testplan:TP-008`; `spec:FR-010`; `research:延續既有前後端與訪客工作階段`; `002-openapi:getCart`; `openapi:createOrder`
+- [x] T018 [US1] [TDD:RED] 為 TP-009 同 key 並行建單僅建立一筆 order 的整合測試 ← `testplan:TP-009`; `spec:FR-007`; `spec:BR-003`; `openapi:createOrder`
+- [x] T019 [US1] [TDD:GREEN] 實作／維持 TP-009 同 key concurrency serialization／unique mapping，兩回應指向同一 order ← `testplan:TP-009`; `spec:FR-007`; `research:冪等鍵與避免重複送單`; `dbml:Table order_idempotency_keys`
 
-#### 後端
+#### Frontend
 
 **必讀對照**
 
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節須對齊 |
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | US1 全情境、BR-001–BR-003、SC-001–SC-004、SC-006 | `spec:US1`; `spec:US1·情境5`; `spec:BR-001`; `spec:BR-002`; `spec:BR-003`; `spec:SC-001`; `spec:SC-002`; `spec:SC-003`; `spec:SC-004`; `spec:SC-006` | 快照、冪等、清 cart |
-| `contracts/http-api.yaml` | `createOrder`、`Order`／`OrderResponse` | `openapi:createOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.OrderResponse`; `openapi:components.schemas.CreateOrderRequest` | 201 vs 200 冪等；空 body |
-| `data-model.dbml` | orders、明細 | `dbml:Table orders`; `dbml:Table order_items` | 持久化快照 |
+| `testplan.md` | checkout request mapping/UI journey | `testplan:TP-001`; `testplan:TP-003`; `testplan:TP-006` | checkout 與錯誤呈現 |
+| `ui-plan.md` | 確認送單、拒絕不可用、成功結果 | `ui-plan:§畫面與流程→確認送單`; `ui-plan:§畫面與流程→拒絕不可用購物車送單`; `ui-plan:§畫面與流程→訂單建立成功` | 顧客送單流程 |
+| `contracts/http-api.yaml` | createOrder request/response | `openapi:createOrder`; `openapi:components.schemas.OrderResponse` | 空 body、idempotency header |
 
-- [x] T010 [US1] 在 `backend/src/__tests__/orders/create-order.test.js` 驗證：多項可用 cart → 201 與 `Order`／`OrderResponse` 符合契約（唯一 order_number、快照明細與總額）、cart 清空；不可用項目 → 409 `CART_HAS_UNAVAILABLE_ITEMS`；空車 → 400 `CART_EMPTY`；含額外 body 欄位（違反 `CreateOrderRequest`）→ **400 拒絕**，不得採信金額；相同 Idempotency-Key 重送 → 200 且僅一筆 order 列；5xx 未建單後同 key 可再建單 ← `spec:US1·情境1`; `spec:US1·情境2`; `spec:US1·情境3`; `spec:US1·情境4`; `spec:US1·情境5`; `spec:US1·情境6`; `spec:FR-001`; `spec:FR-004`; `spec:FR-005`; `spec:FR-006`; `spec:FR-007`; `spec:BR-001`; `spec:BR-002`; `spec:BR-003`; `spec:SC-001`; `spec:SC-002`; `spec:SC-003`; `spec:SC-004`; `spec:SC-006`; `openapi:createOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.OrderResponse`; `openapi:components.schemas.CreateOrderRequest`; `openapi:components.schemas.ErrorBody`; `dbml:Table orders`; `dbml:Table order_items`
-
-### 使用者故事 1 實作
-
-#### 前端
-
-- [x] T011 [US1] 在 `CartPage.jsx`（或 `CheckoutPage.jsx`）加入「確認送單」：先 `GET /api/cart` 確保 CSRF，呼叫 `orderApi.createOrder`（空 body）；成功導向訂單結果並顯示 `order_number`、狀態「已建立」、API 回傳快照金額；不可用或空 cart 顯示後端錯誤 ← `spec:US1`; `spec:FR-002`; `spec:FR-003`; `ui-plan:§畫面與流程→確認送單`; `ui-plan:§畫面與流程→拒絕不可用購物車送單`; `ui-plan:§畫面與流程→訂單建立成功`; `prototype:index.html`; `prototype:assets/app.js`; `openapi:createOrder`; `openapi:getCart`; `openapi:components.schemas.OrderResponse`
-
-#### 後端
-
-- [x] T012 [US1] 完成路由與 T005 `orderService` 的 **wiring**（不重複 T005 業務邏輯）：確認建單交易與 `cartRepository` 刪除在同一 transaction；補齊 `clientError` 映射 `CART_EMPTY`、`CART_HAS_UNAVAILABLE_ITEMS`；非法 body 回 400（`additionalProperties: false`）；僅 201/200 寫入冪等 ← `research:訂單建立交易與購物車清空`; `openapi:createOrder`; `openapi:components.schemas.CreateOrderRequest`; `openapi:components.schemas.ErrorBody`; `dbml:Project`
-
-**Checkpoint US1**：T010、T011 通過；建單後 `GET /api/cart` 為空車。
+- [x] T020 [US1] [TDD:RED] 為 TP-001 checkout success／order number／snapshot 顯示及 TP-003 refused checkout 建立前端 API/UI tests ← `testplan:TP-001`; `testplan:TP-003`; `spec:US1`; `ui-plan:§畫面與流程→確認送單`; `openapi:createOrder`
+- [x] T021 [US1] [TDD:GREEN] 實作／維持 Checkout flow：CSRF bootstrap、空 body create、成功結果顯示與後端錯誤呈現 ← `testplan:TP-001`; `testplan:TP-003`; `spec:FR-001`; `spec:FR-006`; `ui-plan:§畫面與流程→訂單建立成功`; `openapi:createOrder`; `openapi:getCart`
 
 ---
 
-## 階段 4：使用者故事 2－查詢訂單狀態與明細（P1）
+## Phase 4: User Story 2－查詢訂單狀態與明細（P1）
 
-**目標**：同 session 以編號查詢；快照不受菜單漲價影響；跨 session 404。
-
-### 使用者故事 2 測試
-
-#### 後端
+#### Backend
 
 **必讀對照**
 
-| 文件 | 必讀部位（人讀） | 機器錨點 | 本節須對齊 |
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | US2 情境 1–4、FR-008、FR-009、SC-005 | `spec:US2`; `spec:US2·情境1`; `spec:US2·情境2`; `spec:US2·情境3`; `spec:US2·情境4`; `spec:FR-008`; `spec:FR-009`; `spec:SC-005` | 快照查詢、404 |
-| `research.md` | 訂單查詢授權 | `research:訂單查詢授權` | session 雙條件 |
-| `openapi` | `getOrder` | `openapi:getOrder` | ORDER_NOT_FOUND |
+| `testplan.md` | TP-010–TP-012 | `testplan:TP-010`; `testplan:TP-011`; `testplan:TP-012` | owner query、snapshot、foreign session 404 |
+| `contracts/http-api.yaml` | `getOrder`、Order schema | `openapi:getOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.ErrorBody` | response and not-found behavior |
+| `data-model.dbml` | orders and snapshot rows | `dbml:Table orders`; `dbml:Table order_items` | immutable snapshots |
 
-- [x] T013 [US2] 在 `backend/src/__tests__/orders/get-order.test.js` 驗證：建單後同 session GET 200 且回傳狀態、明細與快照金額（FR-009）；修改 menu 價格後 GET 仍為快照；不同 session 或不存在編號 GET 404 `ORDER_NOT_FOUND`（FR-008）← `spec:US2·情境1`; `spec:US2·情境2`; `spec:US2·情境3`; `spec:US2·情境4`; `spec:FR-008`; `spec:FR-009`; `spec:FR-010`; `spec:FR-011`; `spec:SC-005`; `research:訂單查詢授權`; `openapi:getOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.OrderResponse`; `openapi:components.schemas.ErrorBody`
+- [x] T022 [US2] [TDD:RED] 為 TP-010 owner session 查詢完整 order/snapshot 建立測試 ← `testplan:TP-010`; `spec:FR-008`; `spec:FR-009`; `openapi:getOrder`
+- [x] T023 [US2] [TDD:GREEN] 實作／維持 TP-010 以 order number + guest session 查詢並回傳 snapshot ← `testplan:TP-010`; `spec:FR-008`; `spec:FR-009`; `research:訂單查詢授權`; `openapi:getOrder`
+- [x] T024 [US2] [TDD:RED] 為 TP-011 menu price 變更後 query snapshot 不變建立測試 ← `testplan:TP-011`; `spec:BR-001`; `spec:FR-011`; `openapi:getOrder`
+- [x] T025 [US2] [TDD:GREEN] 實作／維持 TP-011 查詢只讀 persisted snapshot、不重算 menu price ← `testplan:TP-011`; `spec:BR-001`; `research:訂單金額快照與查詢權威`; `openapi:getOrder`
+- [x] T026 [US2] [TDD:RED] 為 TP-012 foreign session／unknown order 都回 `ORDER_NOT_FOUND` 建立測試 ← `testplan:TP-012`; `spec:FR-010`; `spec:US2·情境3`; `spec:US2·情境4`; `openapi:getOrder`
+- [x] T027 [US2] [TDD:GREEN] 實作／維持 TP-012 不洩漏他 session order existence ← `testplan:TP-012`; `spec:FR-010`; `research:訂單查詢授權`; `openapi:getOrder`
 
-#### 前端
-
-- [x] T014 [US2] 在 `orderApi.test.js` 驗證 getOrder path mapping 與 404 處理 ← `openapi:getOrder`; `ui-plan:§畫面與流程→查詢訂單狀態`
-
-### 使用者故事 2 實作
-
-#### 前端
-
-- [x] T015 [US2] 新增 `OrderLookupPage.jsx`（或 cart 成功頁內嵌查詢）：輸入 order_number 呼叫 `getOrder`；呈現 status_label、明細與快照金額；404 顯示查無 ← `spec:US2`; `spec:FR-008`; `spec:FR-009`; `ui-plan:§畫面與流程→查詢訂單狀態`; `ui-plan:§畫面與流程→查無訂單`; `prototype:index.html`; `openapi:getOrder`; `openapi:components.schemas.OrderResponse`
-
-#### 後端
-
-- [x] T016 [US2] 確認 `getOrderForSession` 不回傳其他 session 資料；回應欄位對齊 `Order` schema，滿足 FR-009 快照欄位 ← `spec:FR-008`; `spec:FR-009`; `openapi:getOrder`; `openapi:components.schemas.Order`; `openapi:components.schemas.OrderResponse`; `research:訂單查詢授權`
-
----
-
-## 階段 5：整合與驗收
+#### Frontend
 
 **必讀對照**
 
-| 文件 | 必讀部位 | 機器錨點 | 本節須對齊 |
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `spec.md` | SC-001–SC-006、US1、US2 獨立測試 | `spec:SC-001`; `spec:SC-002`; `spec:SC-003`; `spec:SC-004`; `spec:SC-005`; `spec:SC-006`; `spec:US1`; `spec:US2` | 端到端 |
-| `ui-plan.md` | §驗證、狀態與邊界 | `ui-plan:§驗證`; `ui-plan:§畫面與流程→狀態與邊界（雛形須可見）` | 瀏覽器走查 |
+| `testplan.md` | TP-013 lookup UI | `testplan:TP-013` | owner view／not found |
+| `ui-plan.md` | query state／not found | `ui-plan:§畫面與流程→查詢訂單狀態`; `ui-plan:§畫面與流程→查無訂單` | lookup behavior |
 
-- [x] T017 執行 backend／frontend `npm test`；瀏覽器走查：加 cart → 送單 → 查詢 → 切 session 查無；記錄結果 ← `spec:SC-001`; `spec:SC-002`; `spec:SC-003`; `spec:SC-004`; `spec:SC-005`; `spec:SC-006`; `ui-plan:§驗證`; `ui-plan:§畫面與流程→狀態與邊界（雛形須可見）`; `prototype:assets/app.js`
+- [x] T028 [US2] [NON-TDD] 手動走查 TP-013：owner order 顯示 status/snapshot；unknown 或切 session 顯示查無；此為 UI acceptance walkthrough ← `testplan:TP-013`; `spec:FR-008`; `spec:FR-009`; `ui-plan:§畫面與流程→查詢訂單狀態`; `openapi:getOrder`
 
 ---
+
+## Dependencies & Execution Order
+
+- 每個 TDD RED 先驗證預期紅燈，再執行同 TP GREEN；REFACTOR 未列即代表不需要。
+- TP-006 的 contract-policy task 不得標完成，直到上游 contract／plan 對齊；解除後新增明確單步 TDD tasks。
+- 已完成 checkbox 保留為 `[x]`，但本次回溯標籤不證明歷史 RED→GREEN 時序。
 
 ## Format Validation
 
-- [x] 每 User Story 含前端／後端 Tests 與 Implementation 小節
-- [x] 每小節必讀對照表列均有任務 `←` 引用（2026-10-13 複驗後補錨點）
-- [x] 後端 API 任務引用 `openapi:createOrder`／`getOrder`；持久化任務引用 `dbml:Table orders` 等
-- [x] 未新增 spec 外 FR／NFR
+- 每個 TP 案例至少有一項 `testplan:TP-xxx` task；各行為 task 恰有一個 TDD marker。
+- 非行為準備／manual walkthrough／blocked upstream alignment 使用 `[NON-TDD]` 並說明原因。
+- 各有任務 endpoint 小節具有必讀對照表；表列由任務行尾 anchor 引用。
 
-## 依賴與執行順序
-
-- 階段 1 → 2 → 3 → 4 → 5；階段 3 與 4 後端測試可並行開發但須 T005 完成。
-- US2 前端依 US1 建單流程可取得 order_number。
-
-<!-- Constitution self-check: pass -->
+Constitution self-check: pass

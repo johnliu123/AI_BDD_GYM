@@ -468,6 +468,32 @@ function executeQuery(state, text, params = []) {
 
   if (
     sql
+    === 'DELETE FROM order_idempotency_keys WHERE guest_session_id = $1 AND idempotency_key = $2 AND expires_at <= SYSUTCDATETIME()'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const row = state.order_idempotency_keys.get(mapKey);
+    if (row && Date.parse(row.expires_at) <= Date.now()) {
+      state.order_idempotency_keys.delete(mapKey);
+      return { rows: [], rowCount: 1 };
+    }
+    return { rows: [], rowCount: 0 };
+  }
+
+  if (
+    sql
+    === 'UPDATE order_idempotency_keys SET expires_at = $3 WHERE guest_session_id = $1 AND idempotency_key = $2'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const row = state.order_idempotency_keys.get(mapKey);
+    if (!row) {
+      return { rows: [], rowCount: 0 };
+    }
+    row.expires_at = params[2];
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
     === 'INSERT INTO orders (id, guest_session_id, order_number, status, payment_status, total_amount, created_at, status_updated_at, payment_status_updated_at) VALUES ($1, $2, $3, $4, $5, $6, SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME())'
   ) {
     const duplicate = [...state.orders.values()].some((entry) => entry.order_number === params[2]);
@@ -719,6 +745,32 @@ function executeQuery(state, text, params = []) {
       created_at: nowIso(),
       expires_at: params[4],
     });
+    return { rows: [], rowCount: 1 };
+  }
+
+  if (
+    sql
+    === 'DELETE FROM payment_idempotency_keys WHERE guest_session_id = $1 AND idempotency_key = $2 AND expires_at <= SYSUTCDATETIME()'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const row = state.payment_idempotency_keys.get(mapKey);
+    if (row && Date.parse(row.expires_at) <= Date.now()) {
+      state.payment_idempotency_keys.delete(mapKey);
+      return { rows: [], rowCount: 1 };
+    }
+    return { rows: [], rowCount: 0 };
+  }
+
+  if (
+    sql
+    === 'UPDATE payment_idempotency_keys SET expires_at = $3 WHERE guest_session_id = $1 AND idempotency_key = $2'
+  ) {
+    const mapKey = `${params[0]}::${params[1]}`;
+    const row = state.payment_idempotency_keys.get(mapKey);
+    if (!row) {
+      return { rows: [], rowCount: 0 };
+    }
+    row.expires_at = params[2];
     return { rows: [], rowCount: 1 };
   }
 

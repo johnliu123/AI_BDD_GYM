@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cartApi } from '../cartApi.js';
 import { orderApi } from '../orderApi.js';
-import { buildAddToCartPayload, loadMenuData } from '../menuApi.js';
+import { buildAddToCartPayload, loadMenuData, menuItemDisplayFields } from '../menuApi.js';
 import MealOptionsDialog from '../components/MealOptionsDialog.jsx';
 import CartPage from './CartPage.jsx';
 import OrderLookupPage from './OrderLookupPage.jsx';
@@ -33,6 +33,12 @@ export default function MenuPage() {
     }
     if (hash.startsWith('#/merchant')) {
       return 'merchant';
+    }
+    if (hash === '#/cart') {
+      return 'cart';
+    }
+    if (hash === '#/lookup') {
+      return 'lookup';
     }
     return 'menu';
   };
@@ -106,7 +112,12 @@ export default function MenuPage() {
       setActiveView('merchant');
       return;
     }
-    if (globalThis.location.hash.startsWith('#/merchant')) {
+    if (view === 'cart' || view === 'lookup') {
+      globalThis.location.hash = `#/${view}`;
+      setActiveView(view);
+      return;
+    }
+    if (view === 'menu') {
       globalThis.location.hash = '';
     }
     setActiveView(view);
@@ -457,12 +468,14 @@ export default function MenuPage() {
               </p>
             )}
             <section className="menu-grid" aria-label="餐點列表">
-              {visibleItems.map((item) => (
+              {visibleItems.map((item) => {
+                const display = menuItemDisplayFields(item);
+                return (
                 <article key={item.id} className="menu-card">
                   <div className="menu-card__image-wrap">
-                    {item.image_url && !brokenImages[item.id] ? (
+                    {display.imageUrl && !brokenImages[item.id] ? (
                       <img
-                        src={item.image_url}
+                        src={display.imageUrl}
                         alt={item.name}
                         className="menu-card__image"
                         onError={() => handleImageError(item.id)}
@@ -475,9 +488,10 @@ export default function MenuPage() {
                   <div className="menu-card__content">
                     <div className="menu-card__header">
                       <h3>{item.name}</h3>
-                      <span className="menu-card__tag">{item.category_name || '暫無分類'}</span>
+                      <span className="menu-card__tag">{display.categoryLabel}</span>
+                      {!item.is_active && <span className="menu-card__sold-out">售完</span>}
                     </div>
-                    <p className="menu-card__price">{item.price !== undefined && item.price !== null ? `NT$ ${item.price}` : '暫無價格'}</p>
+                    <p className="menu-card__price">{display.priceLabel}</p>
                     <button
                       type="button"
                       className="action-button"
@@ -488,7 +502,8 @@ export default function MenuPage() {
                     </button>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </section>
             </>
           )}
