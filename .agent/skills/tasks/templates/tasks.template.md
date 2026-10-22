@@ -88,7 +88,10 @@
 
 {{us1_backend_tdd_tasks}}
 
-<!-- 任務範例：- [ ] T001 [US1] [TDD:RED] 建立 TP-001 測試 ← `testplan:TP-001`; `spec:US1`; `openapi:{operationId}`。同一 TP 的 GREEN／可選 REFACTOR 另列任務。 -->
+<!-- 任務範例：
+- [ ] T001 [US1] [TDD:RED] 建立 TP-001 測試 ← `testplan:TP-001`; `spec:US1`; `openapi:{operationId}`
+  完成條件：測試因「{依 TP-001 Assert 推導的預期行為缺口}」而失敗
+同一 TP 的 GREEN／可選 REFACTOR 另列任務，不重複完成條件行。 -->
 
 **Checkpoint**: {{us1_checkpoint}}
 
@@ -110,5 +113,6 @@
 - 每個 TP 的 RED→GREEN→可選 REFACTOR 順序可由 T 編號與 Dependencies 明確判定；不可集中所有 RED 後再安排 GREEN。
 - 每個 `testplan.md` 的 TP 案例至少被一項 task 的 `testplan:TP-xxx` 錨點引用；不得新增沒有 testplan 依據的行為任務。
 - 每個行為任務恰有一個 TDD 步驟標籤；RED、GREEN、REFACTOR 必須拆成不同 task，且引用同一 TP 案例。
+- 每個 `[TDD:RED]` 任務下方須有一行「完成條件：…」，明確寫出依 testplan Assert 推導的預期紅燈原因；`[TDD:GREEN]`／`[TDD:REFACTOR]` 不需此行。
 - 純文件／環境準備等非行為任務須標 `[NON-TDD]` 並寫明原因；產品行為不得以此豁免 TDD。
 - 缺 openapi／dbml／ui-plan 錨點時不得發明實作任務；Setup／Foundational 及受 `/technical-research` 驅動的任務須含對應 `research:{決策小節}`。

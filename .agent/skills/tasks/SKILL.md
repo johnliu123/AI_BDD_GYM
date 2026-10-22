@@ -31,7 +31,7 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 1. THINK 每個 User Story 依實際有任務的端點建立 **#### 前端**／**#### 後端**（或其他具名端點）小節；各小節先寫 **必讀對照** 四欄表，包含對應的 `testplan:TP-xxx`。
 2. THINK 從 `contracts/http-api.yaml` 摘 **operationId**（或 METHOD path）；從 `data-model.dbml` 摘 **Table**／**Note**；從 `spec.md` 摘 **US/FR/情境**；從 `ui-plan.md` 摘 **§章節** 與 **prototype 檔名**。
-3. WRITE 每個 `- [ ] Tnnn` 描述含檔案路徑及恰一個任務類型：行為任務用 `[TDD:RED]`／`[TDD:GREEN]`／`[TDD:REFACTOR]`；非行為任務用 `[NON-TDD]` 並寫明理由。行尾 `←` 引用 `testplan:TP-xxx` 與該小節錨點；確保對照表每列至少一個任務引用。
+3. WRITE 每個 `- [ ] Tnnn` 描述含檔案路徑及恰一個任務類型：行為任務用 `[TDD:RED]`／`[TDD:GREEN]`／`[TDD:REFACTOR]`；非行為任務用 `[NON-TDD]` 並寫明理由。行尾 `←` 引用 `testplan:TP-xxx` 與該小節錨點；確保對照表每列至少一個任務引用。**`[TDD:RED]` 任務須在該行下方另起一行「完成條件：…」，依對應 TP 案例的 Assert 寫出預期紅燈原因（測試應因哪個尚未實作的行為缺口而失敗）；不得只寫「建立測試」等無法判定對錯的描述。`[TDD:GREEN]`／`[TDD:REFACTOR]` 不需此行。**
 4. THINK 依 TP 案例交錯安排任務：RED 只建立該案例的一個測試；其後 GREEN 只實作讓該紅燈轉綠的最小行為；REFACTOR 僅在測試全綠後做行為不變整理。任務不可合併多個 TDD 步驟；不得集中所有 RED 後才開始 GREEN。
 5. THINK 後端任務必引用對應 `openapi:`；持久化任務必引用 `dbml:`；前端必引用 `ui-plan:`／`prototype:`。
 

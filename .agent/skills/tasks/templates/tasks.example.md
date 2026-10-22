@@ -69,10 +69,13 @@
 | `contracts/http-api.yaml` | Merchant category/menu operations | `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:deleteMerchantCategory` | API response 與錯誤契約 |
 
 - [ ] T003 [US1] [TDD:RED] 為 TP-001 建立分類／餐點寫入與公開菜單可讀的測試 ← `testplan:TP-001`; `spec:US1`; `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:listMenuItems`
+  完成條件：測試因分類與餐點尚未建立、公開菜單缺少對應欄位而失敗
 - [ ] T004 [US1] [TDD:GREEN] 實作 TP-001 所需的分類／餐點建立行為 ← `testplan:TP-001`; `spec:FR-001`; `spec:FR-002`; `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`
 - [ ] T005 [US1] [TDD:RED] 為 TP-002 建立非法價格時拒絕且不部分寫入的測試 ← `testplan:TP-002`; `spec:US1·情境4`; `openapi:createMerchantMenuItem`
+  完成條件：測試因價格格式驗證尚未實作、請求仍回 2xx 或部分寫入而失敗
 - [ ] T006 [US1] [TDD:GREEN] 實作 TP-002 所需的 payload 驗證與原子性 ← `testplan:TP-002`; `spec:FR-002`; `openapi:createMerchantMenuItem`
 - [ ] T007 [US1] [TDD:RED] 為 TP-003 建立刪除使用中分類回 409 的測試 ← `testplan:TP-003`; `spec:FR-001`; `openapi:deleteMerchantCategory`
+  完成條件：測試因刪除使用中分類未被拒絕（未回 409 `CATEGORY_IN_USE`）而失敗
 - [ ] T008 [US1] [TDD:GREEN] 實作 TP-003 所需的 `CATEGORY_IN_USE` 拒絕行為 ← `testplan:TP-003`; `spec:FR-001`; `openapi:deleteMerchantCategory`
 - [ ] T009 [US1] [TDD:REFACTOR] 在 TP-001–TP-003 測試保持綠燈下整理菜單寫入程式；不得改變契約 ← `testplan:TP-001`; `testplan:TP-002`; `testplan:TP-003`; `openapi:createMerchantMenuItem`
 
@@ -93,8 +96,10 @@
 | `contracts/http-api.yaml` | Availability operations | `openapi:patchMenuItemAvailability`; `openapi:patchMenuOptionAvailability` | PATCH 行為 |
 
 - [ ] T010 [US2] [TDD:RED] 為 TP-004 建立餐點停供後 API／公開菜單反映狀態的測試 ← `testplan:TP-004`; `spec:US2`; `openapi:patchMenuItemAvailability`; `openapi:listMenuItems`
+  完成條件：測試因停供狀態未被持久化、公開菜單仍顯示可供應而失敗
 - [ ] T011 [US2] [TDD:GREEN] 實作 TP-004 的餐點停供與恢復供應行為 ← `testplan:TP-004`; `spec:FR-004`; `spec:FR-006`; `openapi:patchMenuItemAvailability`
 - [ ] T012 [US2] [TDD:RED] 為 TP-005 建立停供選項不能加入 cart 的測試 ← `testplan:TP-005`; `spec:FR-005`; `spec:FR-011`; `openapi:patchMenuOptionAvailability`; `002-openapi:addCartItem`
+  完成條件：測試因停供選項仍可被加入購物車而失敗
 - [ ] T013 [US2] [TDD:GREEN] 實作 TP-005 的選項供應狀態驗證 ← `testplan:TP-005`; `spec:FR-005`; `spec:FR-011`; `openapi:patchMenuOptionAvailability`; `002-openapi:addCartItem`
 
 **Checkpoint**：TP-004、TP-005 通過；若需整理才新增獨立 REFACTOR 任務。
@@ -115,6 +120,7 @@
 | `ui-plan.md` | 顧客售完標示 | `ui-plan:§顧客售完標示` | 項目呈現 |
 
 - [ ] T014 [US3] [TDD:RED] 建立 TP-006 購物車停供項目呈現與金額測試 ← `testplan:TP-006`; `spec:FR-007`; `ui-plan:§顧客售完標示`
+  完成條件：測試因購物車未呈現停供項目與正確總額而失敗
 - [ ] T015 [US3] [TDD:GREEN] 實作 TP-006 購物車不可用項目呈現 ← `testplan:TP-006`; `spec:FR-013`; `ui-plan:§顧客售完標示`
 
 #### Backend
@@ -127,8 +133,10 @@
 | `contracts/http-api.yaml` | create order | `003-openapi:createOrder` | 供應驗證與計價 |
 
 - [ ] T016 [US3] [TDD:RED] 建立 TP-007 停供 cart 建單拒絕且保留 cart 的測試 ← `testplan:TP-007`; `spec:FR-008`; `003-openapi:createOrder`
+  完成條件：測試因建單未驗證供應狀態、仍接受停供項目而失敗
 - [ ] T017 [US3] [TDD:GREEN] 實作 TP-007 建單前供應狀態驗證 ← `testplan:TP-007`; `spec:FR-008`; `spec:FR-013`; `003-openapi:createOrder`
 - [ ] T018 [US3] [TDD:RED] 建立 TP-008 偽造金額／供應欄位不影響持久化的測試 ← `testplan:TP-008`; `spec:FR-012`; `spec:SC-005`; `003-openapi:createOrder`
+  完成條件：測試因伺服器未以自身權威金額／供應狀態覆寫用戶端偽造欄位而失敗
 - [ ] T019 [US3] [TDD:GREEN] 實作 TP-008 伺服器端金額與供應狀態權威 ← `testplan:TP-008`; `spec:FR-012`; `spec:BR-001`; `003-openapi:createOrder`
 
 ---
@@ -145,8 +153,10 @@
 | `contracts/http-api.yaml` | merchant authorization errors | `openapi:components.responses.MerchantForbidden`; `openapi:components.responses.MerchantUnauthorized` | 錯誤契約 |
 
 - [ ] T020 [US4] [TDD:RED] 建立 TP-009 角色允許／拒絕矩陣測試 ← `testplan:TP-009`; `spec:FR-009`; `spec:FR-010`; `spec:FR-014`; `openapi:components.responses.MerchantForbidden`
+  完成條件：測試因角色授權矩陣尚未實作、未依角色正確回應 403／200 而失敗
 - [ ] T021 [US4] [TDD:GREEN] 實作 TP-009 menu／orders／admin 授權矩陣 ← `testplan:TP-009`; `spec:BR-003`; `openapi:components.responses.MerchantForbidden`
 - [ ] T022 [US4] [TDD:RED] 建立 TP-010 未授權／未配置憑證回應測試 ← `testplan:TP-010`; `spec:US4·情境4`; `openapi:components.responses.MerchantUnauthorized`; `openapi:components.responses.MerchantNotConfigured`
+  完成條件：測試因缺少／未配置憑證時未回 401／503 而失敗
 - [ ] T023 [US4] [TDD:GREEN] 實作 TP-010 的 401／503 回應行為 ← `testplan:TP-010`; `spec:FR-015`; `openapi:components.responses.MerchantUnauthorized`; `openapi:components.responses.MerchantNotConfigured`
 
 ---
@@ -163,8 +173,10 @@
 | `research.md` | 集中式 HTTP 例外處理 | `research:集中式 HTTP 例外處理` | middleware 行為 |
 
 - [ ] T024 [US5] [TDD:RED] 建立 TP-011 未知 API 路徑回 JSON 404 的測試 ← `testplan:TP-011`; `spec:FR-017`; `spec:NFR-010`; `openapi:components.responses.NotFound`
+  完成條件：測試因未知路徑未回 JSON 格式 404 而失敗
 - [ ] T025 [US5] [TDD:GREEN] 實作 TP-011 JSON 404 handler ← `testplan:TP-011`; `spec:FR-017`; `openapi:components.responses.NotFound`
 - [ ] T026 [US5] [TDD:RED] 建立 TP-012 500 body 不洩漏且無額外遠端呼叫的測試 ← `testplan:TP-012`; `spec:FR-016`; `spec:NFR-010`; `spec:NFR-011`
+  完成條件：測試因 500 回應仍洩漏內部細節，或集中錯誤處理觸發額外遠端呼叫而失敗
 - [ ] T027 [US5] [TDD:GREEN] 實作 TP-012 集中錯誤處理與安全日誌 ← `testplan:TP-012`; `spec:FR-016`; `spec:NFR-010`; `spec:NFR-011`; `research:集中式 HTTP 例外處理`
 
 ---
@@ -181,8 +193,10 @@
 | `research.md` | 整合測試與 smoke | `research:整合測試與 smoke` | 測試環境 |
 
 - [ ] T028 [US6] [TDD:RED] 建立 TP-013 顧客至店家完成訂單的整合測試 ← `testplan:TP-013`; `spec:FR-018`; `spec:FR-019`; `004-openapi:completeMerchantOrder`
+  完成條件：測試因跨端點訂單生命週期尚未串接完整而失敗
 - [ ] T029 [US6] [TDD:GREEN] 實作 TP-013 整合流程所需的缺漏行為 ← `testplan:TP-013`; `spec:SC-003`; `research:整合測試與 smoke`
 - [ ] T030 [US6] [TDD:RED] 建立 TP-014 冪等重送與竄改金額整合測試 ← `testplan:TP-014`; `spec:SC-005`; `003-openapi:createOrder`; `005-openapi:payOrder`
+  完成條件：測試因重送相同 idempotency key 仍新增訂單，或竄改金額未被伺服器覆寫而失敗
 - [ ] T031 [US6] [TDD:GREEN] 實作 TP-014 所需的冪等與伺服器計價行為 ← `testplan:TP-014`; `spec:FR-012`; `spec:SC-005`
 - [ ] T032 [US6] [NON-TDD] 執行 TP-015 指定的預設 CI／migration 命令並記錄結果；這是環境驗證，不改變產品行為 ← `testplan:TP-015`; `spec:NFR-012`; `spec:SC-007`; `techstack:整合測試`
 
@@ -198,6 +212,7 @@
 
 - 每個 User Story 依 testplan 分組；所有 testplan TP ID 至少出現在一項 task 的 `testplan:TP-xxx` 錨點中。
 - 每個行為任務恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]` 標籤；多步驟工作必須拆成多項任務。
+- 每個 `[TDD:RED]` 任務下方皆有「完成條件：…」一行，寫出依 TP 案例 Assert 推導的預期紅燈原因。
 - 無 TDD 標籤的非行為任務須標 `[NON-TDD]` 並說明原因；不得將產品行為實作標為 NON-TDD。
 - `####` 小節須有必讀對照表，且每列至少由一個任務的 `←` 錨點引用；各 T 任務至少引用一個機器錨點。
 - 後端 HTTP 任務引用 `openapi:`；持久化任務引用 `dbml:`；前端任務引用 `ui-plan:`／`prototype:`；spec 追溯使用 `spec:`。

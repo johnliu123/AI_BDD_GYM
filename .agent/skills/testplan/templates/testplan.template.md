@@ -42,11 +42,6 @@
 - **P0**：{{p0_risk_definition}}
 - **P1**：{{p1_story_acceptance_definition}}
 - **P2**：{{p2_optional_coverage_definition}}
-- **通過／失敗**：{{pass_and_fail_definitions}}
-
-- **P0**：{{p0_definition}}
-- **P1**：{{p1_definition}}
-- **P2**：{{p2_definition}}
 - **通過**：{{pass_definition}}
 - **失敗**：{{fail_definition}}
 

@@ -40,7 +40,7 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 2. THINK 進入每個 `#### 前端` / `#### 後端` 小節前：READ 該小節 **必讀對照** 每一列的機器錨點
 3. THINK 對每個 `- [ ] Tnnn`（按 T 編號與 Dependencies，尊重 `[P]` 與同檔案約束）：
    - READ 該行 `←` 錨點（`anchor-resolver.md`）
-   - 若標 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]`，明確向 `/tdd` 傳入 requested step 分別為 `RED`、`GREEN` 或 `REFACTOR`；同時提供 T 編號、`testplan:TP-xxx` 案例、public seam、任務描述與完成條件。不得改成 `FULL` 或一口氣代跑其餘 TDD 步驟。
+   - 若標 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]`，明確向 `/tdd` 傳入 requested step 分別為 `RED`、`GREEN` 或 `REFACTOR`；同時提供 T 編號、**`{FEATURE_DIR}/testplan.md` 路徑**、`testplan:TP-xxx` 案例、public seam、任務描述與完成條件（RED 任務若在 `tasks.md` 中已寫明「完成條件」，須原文傳遞，不得摘要或改寫）。不得改成 `FULL` 或一口氣代跑其餘 TDD 步驟。
    - GREEN 前確認對應 RED task 已完成且紅燈原因正確；REFACTOR 前確認對應案例已綠。前置不成立時讓 `/tdd` 停止，不自行跳步。
    - 若標 `[NON-TDD]`，核對其理由確為文件／環境等非行為工作，再依一般任務方式完成；若任務實際改變產品行為則停止並要求拆成 TDD tasks。
    - 若該 T 描述要求執行命令或走查，執行並記錄結果
