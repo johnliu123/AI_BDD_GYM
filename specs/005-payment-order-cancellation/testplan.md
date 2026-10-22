@@ -57,12 +57,12 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-001 | US1 情境1、FR-001–FR-002、FR-010、BR-001、SC-001 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session；payment stub success；total snapshot 已知 | 發起付款 | 回 200；payment_status=`paid`；`paid_at` 有值；回應金額等於 order snapshot |
-| TP-002 | US1 情境2、FR-003、BR-004 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-ALREADY-PAID`；owner session；已存在 paid result | 再次付款 | 回 409 `ORDER_ALREADY_PAID`；不產生第二次付款結果，snapshot 不變 |
-| TP-003 | US1 FR-003、spec pending policy | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-FRESH`；owner session；pending age < 120s；可控 clock | 再次付款 | 回 409 `PAYMENT_IN_PROGRESS`；付款仍為 pending；不新增 paid idempotency mapping |
-| TP-004 | US1 FR-003、spec stale policy | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-STALE`；owner session；pending age > 120s；stub success | 重入付款 | 回 200；payment_status=`paid`；只存在一筆成功付款結果／冪等 mapping |
-| TP-005 | US1 情境4、FR-001、FR-011 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；另建立 session B | session B 發起 A 訂單付款 | 回 404 `ORDER_NOT_FOUND`；A 訂單 payment/status/total 均不變 |
-| TP-006 | US1 情境3、FR-010、BR-001、SC-005 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | unpaid order；body 帶偽造金額及 items | 以偽造金額／明細發起付款 | 回 200；只依 server snapshot 付款；response／持久化 items 與總額不變。Contract 列明相容欄位會被忽略；已通過。 |
+| TP-001 | US1 情境1、FR-001–FR-002、FR-010、BR-001、SC-001 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session；payment stub success；total snapshot 已知 | 發起付款 | [response+state] 回 200；payment_status=`paid`；`paid_at` 有值；回應金額等於 order snapshot |
+| TP-002 | US1 情境2、FR-003、BR-004 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-ALREADY-PAID`；owner session；已存在 paid result | 再次付款 | [response+state] 回 409 `ORDER_ALREADY_PAID`；不產生第二次付款結果，snapshot 不變 |
+| TP-003 | US1 FR-003、spec pending policy | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-FRESH`；owner session；pending age < 120s；可控 clock | 再次付款 | [response+state] 回 409 `PAYMENT_IN_PROGRESS`；付款仍為 pending；不新增 paid idempotency mapping |
+| TP-004 | US1 FR-003、spec stale policy | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-STALE`；owner session；pending age > 120s；stub success | 重入付款 | [response+state] 回 200；payment_status=`paid`；只存在一筆成功付款結果／冪等 mapping |
+| TP-005 | US1 情境4、FR-001、FR-011 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；另建立 session B | session B 發起 A 訂單付款 | [response] 回 404 `ORDER_NOT_FOUND`；A 訂單 payment/status/total 均不變 |
+| TP-006 | US1 情境3、FR-010、BR-001、SC-005 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | unpaid order；body 帶偽造金額及 items | 以偽造金額／明細發起付款 | [response+state] 回 200；只依 server snapshot 付款；response／持久化 items 與總額不變。Contract 列明相容欄位會被忽略；已通過。 |
 
 ### 5.2 使用者故事 2－付款失敗與重試
 
@@ -72,10 +72,11 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-007 | US2 情境1、FR-002、FR-004、FR-012、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`)；dev-only `simulate_outcome` 依 research／techstack 設定 | P1 | `FX-ORDER-CREATED-UNPAID`；非 production；明確啟用 `ALLOW_PAYMENT_SIMULATE_BODY`；stub outcome=failure | 發起模擬失敗付款 | 回 200；payment_status=`failed`；失敗時間／可顯示原因存在；出餐狀態與 snapshot 不變；不寫 success mapping |
-| TP-008 | US2 情境2、FR-005、BR-001、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P1 | `FX-ORDER-PAYMENT-FAILED`；owner session；首次 payment failed、無 paid mapping；第二次 stub success | 重試付款 | 回 200；payment_status=`paid`；total snapshot 不變；保留規格要求的最後失敗摘要／時間 |
-| TP-009 | US2 情境3、FR-012、SC-006 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`)；`Idempotency-Key` | P0 | `FX-PAYMENT-IDEMPOTENCY`；同 owner session/order/key；首次 stub success | 以相同 key 重送付款 | 首次與重送均回相同 paid order；只新增一筆 payment idempotency row；不重複扣款狀態 |
-| TP-010 | US2 情境4、FR-012、SC-006 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`)；測試用 `PAYMENT_TEST_ABORT_AFTER_PENDING` seam | P0 | `FX-PAYMENT-5XX-RETRY`；可控 fault 在 pending 後、paid 持久化前觸發；key 尚未映射 | 以 key 發起造成 5xx 的付款 | 回 500；不寫 paid mapping；移除 fault 後同 key 可成功一次並只建立一筆 paid mapping |
+| TP-007 | US2 情境1、FR-002、FR-004、FR-012、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`)；dev-only `simulate_outcome` 依 research／techstack 設定 | P1 | `FX-ORDER-CREATED-UNPAID`；非 production；明確啟用 `ALLOW_PAYMENT_SIMULATE_BODY`；stub outcome=failure | 發起模擬失敗付款 | [response+state] 回 200；payment_status=`failed`；失敗時間／可顯示原因存在；出餐狀態與 snapshot 不變；不寫 success mapping |
+| TP-008 | US2 情境2、FR-005、BR-001、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P1 | `FX-ORDER-PAYMENT-FAILED`；owner session；首次 payment failed、無 paid mapping；第二次 stub success | 重試付款 | [response+state] 回 200；payment_status=`paid`；total snapshot 不變；保留規格要求的最後失敗摘要／時間 |
+| TP-009 | US2 情境3、FR-012、SC-006 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`)；`Idempotency-Key` | P0 | `FX-PAYMENT-IDEMPOTENCY`；同 owner session/order/key；首次 stub success | 以相同 key 重送付款 | [idempotent] 首次與重送均回相同 paid order；只新增一筆 payment idempotency row；不重複扣款狀態 |
+| TP-010 | US2 情境4、FR-012、SC-006 | HTTP integration | 缺少經 system-analysis 確認的故障注入入口；目前僅 `techstack.md` 提及該測試設定 | P0 | `FX-PAYMENT-5XX-RETRY`；待分析來源確認安全 fault seam 後，準備 pending 後、paid 持久化前的可控故障 | 待 seam 確認後以 key 發起故障付款 | [response+state] 待分析來源確認故障注入 seam 後，驗證回 500、不寫 paid mapping，移除 fault 後同 key 僅成功一次；來源未補齊前本案阻塞，不判定通過 |
+| TP-027 | US2 邊界、FR-006 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`)；005 `PayOrderRequest` | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session；body 分別帶未定義的 currency 欄位或替代 order identifier，使用契約允許格式 | 以不可信幣別或訂單識別欄位發起付款 | [response+state] 每種未定義欄位均依 `additionalProperties: false` 回 400；路徑指定的訂單付款狀態、金額快照及明細不變 |
 
 ### 5.3 使用者故事 3－顧客取消訂單
 
@@ -85,14 +86,14 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-011 | US3 情境1、FR-007、FR-009、FR-011、FR-013、SC-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session | 取消訂單 | 回 200；status=`cancelled`、`cancelled_at` 有值；payment status 維持 unpaid；items／total snapshot 保留 |
-| TP-012 | US3 情境1、FR-013、SC-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CREATED-FAILED`；owner session；payment failed | 取消訂單 | 回 200；status=`cancelled`；payment status 仍 failed；snapshot 保留 |
-| TP-013 | US3 情境1、FR-013、BR-002–BR-003、SC-003 | HTTP integration | `POST /api/orders/{order_number}/cancel` (`cancelOrder`)；pay operation 建立 paid order | P0 | `FX-ORDER-CREATED-PAID`；owner session；stub success | 取消已付款訂單 | 回 200；status=`cancelled`、payment_status=`refunded`、`refunded_at` 有值；snapshot 不變；不呼叫真實金流 |
-| TP-014 | US3 情境2、FR-008、SC-004 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-ACCEPTED`；order status accepted | 取消訂單 | 回 409 `ORDER_NOT_CANCELLABLE`；status/payment/snapshot 不變 |
-| TP-015 | US3 情境5、FR-013、BR-004 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-FRESH`；owner session；pending age < 120s；可控 clock | 取消訂單 | 回 409 `PAYMENT_IN_PROGRESS`；status/payment 不變 |
-| TP-016 | US3 情境5、FR-013、BR-003–BR-004、SC-003 | HTTP integration | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-STALE`；owner session；pending age > 120s；可控 clock | 取消訂單 | 同一交易後 status=`cancelled`、payment_status=`failed`；不得存在 pending+cancelled 組合；`cancelled_at` 有值 |
-| TP-017 | US3 情境3、FR-007–FR-009、BR-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CANCELLED`；order 已 cancelled；owner session | 再次取消 | 依 005 cancel contract 回應；不新增狀態變更或時間戳，既有 snapshot 保留 |
-| TP-018 | US3 情境4、FR-011 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；session B 不同於 owner A | session B 取消 A 訂單 | 回 404 `ORDER_NOT_FOUND`；A 訂單狀態不變 |
+| TP-011 | US3 情境1、FR-007、FR-009、FR-011、FR-013、SC-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session | 取消訂單 | [response+state] 回 200；status=`cancelled`、`cancelled_at` 有值；payment status 維持 unpaid；items／total snapshot 保留 |
+| TP-012 | US3 情境1、FR-013、SC-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CREATED-FAILED`；owner session；payment failed | 取消訂單 | [response+state] 回 200；status=`cancelled`；payment status 仍 failed；snapshot 保留 |
+| TP-013 | US3 情境1、FR-013、BR-002–BR-003、SC-003 | HTTP integration | `POST /api/orders/{order_number}/cancel` (`cancelOrder`)；pay operation 建立 paid order | P0 | `FX-ORDER-CREATED-PAID`；owner session；stub success | 取消已付款訂單 | [response+state] 回 200；status=`cancelled`、payment_status=`refunded`、`refunded_at` 有值；snapshot 不變；不呼叫真實金流 |
+| TP-014 | US3 情境2、FR-008、SC-004 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-ACCEPTED`；order status accepted | 取消訂單 | [response] 回 409 `ORDER_NOT_CANCELLABLE`；status/payment/snapshot 不變 |
+| TP-015 | US3 情境5、FR-013、BR-004 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-FRESH`；owner session；pending age < 120s；可控 clock | 取消訂單 | [response] 回 409 `PAYMENT_IN_PROGRESS`；status/payment 不變 |
+| TP-016 | US3 情境5、FR-013、BR-003–BR-004、SC-003 | HTTP integration | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-PAYMENT-PENDING-STALE`；owner session；pending age > 120s；可控 clock | 取消訂單 | [response] 同一交易後 status=`cancelled`、payment_status=`failed`；不得存在 pending+cancelled 組合；`cancelled_at` 有值 |
+| TP-017 | US3 情境3、FR-007–FR-009、BR-003 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-CANCELLED`；order 已 cancelled；owner session | 再次取消 | [idempotent] 依 005 cancel contract 回應；不新增狀態變更或時間戳，既有 snapshot 保留 |
+| TP-018 | US3 情境4、FR-011 | HTTP API | `POST /api/orders/{order_number}/cancel` (`cancelOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；session B 不同於 owner A | session B 取消 A 訂單 | [response+state] 回 404 `ORDER_NOT_FOUND`；A 訂單狀態不變 |
 
 ### 5.4 使用者故事 4－顧客查詢反映付款與取消狀態
 
@@ -100,8 +101,8 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-019 | US4 情境1–3、FR-016、FR-011、SC-001 | HTTP API | `GET /api/orders/{order_number}` (`getOrder`) | P1 | `FX-ORDER-PAYMENT-STATE-MATRIX`；owner session；paid、failed、cancelled/refunded 結果各自 fixture | 查詢訂單 | 回傳持久化 `status`／`status_label`、`payment_status`／`payment_status_label` 及建立時 snapshot；failed reason 若有依 contract 回傳 |
-| TP-020 | US4 情境4、FR-011、BR-004 | HTTP API | `GET /api/orders/{order_number}` (`getOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；使用 session B 或不存在 order number | 查詢訂單 | 回 404 `ORDER_NOT_FOUND`；不洩露他人 order |
+| TP-019 | US4 情境1–3、FR-016、FR-011、SC-001 | HTTP API | `GET /api/orders/{order_number}` (`getOrder`) | P1 | `FX-ORDER-PAYMENT-STATE-MATRIX`；owner session；paid、failed、cancelled/refunded 結果各自 fixture | 查詢訂單 | [response+state] 回傳持久化 `status`／`status_label`、`payment_status`／`payment_status_label` 及建立時 snapshot；failed reason 若有依 contract 回傳 |
+| TP-020 | US4 情境4、FR-011、BR-004 | HTTP API | `GET /api/orders/{order_number}` (`getOrder`) | P0 | `FX-ORDER-OWNED-BY-SESSION-A`；使用 session B 或不存在 order number | 查詢訂單 | [response] 回 404 `ORDER_NOT_FOUND`；不洩露他人 order |
 
 ### 5.5 使用者故事 5－店家檢視訂單付款與取消資訊
 
@@ -109,12 +110,12 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-021 | US5 情境1、FR-017–FR-018、FR-020、SC-006 | HTTP API | `GET /api/merchant/orders?payment_status=paid` (`listMerchantOrders`) | P1 | `FX-MERCHANT-PAYMENT-MIX`；有效 merchant token；unpaid／paid／failed orders | 以 payment_status 篩選列表 | 回 200；僅回 contract 定義的 paid records；每列含付款狀態／label 及 snapshot 欄位 |
-| TP-022 | US5 情境1、FR-018、FR-020 | HTTP API | `GET /api/merchant/orders?payment_status=invalid` (`listMerchantOrders`) | P1 | `FX-MERCHANT-PAYMENT-MIX`；有效 token | 使用非法 payment_status filter | 回 400 `INVALID_PAYMENT_STATUS_FILTER`；資料不變 |
-| TP-023 | US5 情境2、FR-017、FR-020、BR-004 | HTTP API | `GET /api/merchant/orders/{order_number}` (`getMerchantOrder`) | P1 | `FX-ORDER-PAYMENT-FAILED`；有效 merchant token；payment_failure_reason 已保存 | 讀取詳情 | 回 payment status／label 及失敗原因摘要（若 contract 欄位存在）；order snapshot 保持不變 |
-| TP-024 | US5 情境3、FR-019–FR-020、BR-003、SC-003 | HTTP API | 004 `POST /api/merchant/orders/{order_number}/accept` (`acceptMerchantOrder`)；004 start-preparing／complete actions | P0 | `FX-ORDER-CANCELLED`；有效 merchant token | 接單或推進 cancelled order（分開操作） | 每個 operation 回 409 `ORDER_STATUS_CONFLICT`；order 保持 cancelled，payment/snapshot 不變 |
-| TP-025 | US5 情境4、FR-020、SC-005 | HTTP API | 005 `GET /api/merchant/orders`／`GET /api/merchant/orders/{order_number}` | P0 | `FX-MERCHANT-AUTH`；missing／invalid token；另有未配置 credential 情境 | 呼叫店家 endpoint | missing／invalid 回 401 `MERCHANT_UNAUTHORIZED`；未配置回 503 `MERCHANT_NOT_CONFIGURED`；不回訂單資料 |
-| TP-026 | US3 情境3、FR-001、FR-003、BR-003 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-CANCELLED`；order 已 cancelled；owner session | 對已取消訂單發起付款 | 回 409 `ORDER_CANCELLED`；status/payment/snapshot 不變 |
+| TP-021 | US5 情境1、FR-017–FR-018、FR-020、SC-006 | HTTP API | `GET /api/merchant/orders?payment_status=paid` (`listMerchantOrders`) | P1 | `FX-MERCHANT-PAYMENT-MIX`；有效 merchant token；unpaid／paid／failed orders | 以 payment_status 篩選列表 | [response] 回 200；僅回 contract 定義的 paid records；每列含付款狀態／label 及 snapshot 欄位 |
+| TP-022 | US5 情境1、FR-018、FR-020 | HTTP API | `GET /api/merchant/orders?payment_status=invalid` (`listMerchantOrders`) | P1 | `FX-MERCHANT-PAYMENT-MIX`；有效 token | 使用非法 payment_status filter | [response+state] 回 400 `INVALID_PAYMENT_STATUS_FILTER`；資料不變 |
+| TP-023 | US5 情境2、FR-017、FR-020、BR-004 | HTTP API | `GET /api/merchant/orders/{order_number}` (`getMerchantOrder`) | P1 | `FX-ORDER-PAYMENT-FAILED`；有效 merchant token；payment_failure_reason 已保存 | 讀取詳情 | [response] 回 payment status／label 及失敗原因摘要（若 contract 欄位存在）；order snapshot 保持不變 |
+| TP-024 | US5 情境3、FR-019–FR-020、BR-003、SC-003 | HTTP API | 004 `POST /api/merchant/orders/{order_number}/accept` (`acceptMerchantOrder`)；004 start-preparing／complete actions | P0 | `FX-ORDER-CANCELLED`；有效 merchant token | 接單或推進 cancelled order（分開操作） | [response] 每個 operation 回 409 `ORDER_STATUS_CONFLICT`；order 保持 cancelled，payment/snapshot 不變 |
+| TP-025 | US5 情境4、FR-020、SC-005 | HTTP API | 005 `GET /api/merchant/orders`／`GET /api/merchant/orders/{order_number}` | P0 | `FX-MERCHANT-AUTH`；missing／invalid token；另有未配置 credential 情境 | 呼叫店家 endpoint | [response] missing／invalid 回 401 `MERCHANT_UNAUTHORIZED`；未配置回 503 `MERCHANT_NOT_CONFIGURED`；不回訂單資料 |
+| TP-026 | US3 情境3、FR-001、FR-003、BR-003 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P0 | `FX-ORDER-CANCELLED`；order 已 cancelled；owner session | 對已取消訂單發起付款 | [response+state] 回 409 `ORDER_CANCELLED`；status/payment/snapshot 不變 |
 
 ## 6. 非功能需求追溯
 
@@ -150,6 +151,15 @@
 
 ## 8. 執行與交接
 
+### 快速狀態摘要
+
+- **最後執行日期**：既有摘要未記逐案日期
+- **已完成 TP**：TP-001–TP-009、TP-011–TP-027（TP-001–TP-026 依既有摘要；TP-027 本次執行通過）
+- **進行中 TP**：無
+- **未啟動 TP**：TP-010（故障注入入口尚未列入 system-analysis）
+- **已知阻塞**：TP-010 需先補 plan／API analysis seam；真實 SQL Server 資料保留 smoke 未執行。
+- **下一步建議**：先更新 system-analysis 來源並重驗 TP-010，再把 MSSQL migration smoke 排入有專用 SQL Server 的環境。
+
 ### TDD 進入條件
 
 - 本計畫經審閱；每輪選一個 TP 與 public seam，先 RED，再 GREEN；REFACTOR 僅於測試全綠後。
@@ -167,17 +177,58 @@
 | User Story／需求 ID | 本計畫案例 |
 |---|---|
 | US1；FR-001–FR-003、FR-010–FR-012；BR-001–BR-002；SC-001、SC-005 | TP-001–TP-006 |
-| US2；FR-002、FR-004–FR-006、FR-012；BR-001、BR-004；SC-002、SC-006 | TP-007–TP-010 |
+| US2；FR-002、FR-004–FR-006、FR-012；BR-001、BR-004；SC-002、SC-006 | TP-007–TP-010、TP-027 |
 | US3；FR-007–FR-009、FR-011、FR-013；BR-002–BR-004；SC-003–SC-004 | TP-011–TP-018、TP-026 |
 | US4；FR-011、FR-015–FR-016；BR-002、BR-004；SC-001 | TP-019–TP-020 |
 | US5；FR-017–FR-020；BR-002–BR-004；SC-003、SC-006 | TP-021–TP-025 |
 | Cross-story FR-010 | TP-001、TP-006 |
 
-## 10. 執行結果
+## 10. 執行狀態追蹤
 
-- TP-001–TP-026：Backend payment／cancel／query／merchant tests 通過，含 owner 隔離、paid／failed／pending、冪等與 5xx 重試、退款、重複／跨 session 取消及 merchant filters/auth。
+> 狀態依文件既有執行摘要回填；未記錄的逐案日期與 Assert 覆蓋度不推定。
+
+| TP ID | 狀態 | 執行日期 | 紅燈驗證 | 綠燈驗證 | Assert 符合度 | 備註 |
+|---|---|---|---|---|---|---|
+| TP-001 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-002 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-003 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-004 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-005 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-006 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-007 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-008 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-009 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-010 | ⬜ 未執行 | — | — | — | — | 測試入口未列於 system-analysis；待補來源後重驗 |
+| TP-011 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-012 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-013 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-014 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-015 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-016 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-017 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-018 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-019 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-020 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-021 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-022 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-023 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-024 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-025 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-026 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-027 | 🟢 驗證通過 | 2026-10-22 | — | `node --test src/__tests__/orders/payment-pay.test.js`（8/8）；currency／order_id 各回 400，訂單狀態、snapshot 與冪等記錄不變 | 符合 | 本次參數化回歸測試 |
+
+## 11. AI 自主決策與發現紀錄
+
+| 日期 | TP 案例 | TDD 步驟 | 決策／發現內容 | 處置 |
+|---|---|---|---|---|
+| — | — | — | — | — |
+
+## 12. 執行結果（既有紀錄）
+
+- TP-001–TP-009、TP-011–TP-026：Backend payment／cancel／query／merchant tests 的歷史紀錄為通過，含 owner 隔離、paid／failed／pending、冪等、退款、重複／跨 session 取消及 merchant filters/auth。
+- TP-010：歷史測試曾通過，但其故障注入入口未列於 system-analysis；依本次 seam 權威檢查不視為本計畫核准驗收，待補來源後重驗。
 - TP-006：contract 已列出並允許忽略相容性金額／items 欄位；response 與 snapshot 測試通過。
 - Browser：付款成功、取消 unpaid、paid 後退款、顧客查詢狀態及金額快照均通過。
 - `npm run verify:migrations` 通過；`smoke:mssql:005` 因未設定 MSSQL 環境變數而安全 skip，未驗證真實 SQL Server 資料保留。
 
-Constitution self-check: exception — 本機無專用 MSSQL 測試目標，未執行真實 SQL Server migration／資料保留 smoke。
+Constitution self-check: exceptions — TP-010 測試 seam 未列入 system-analysis；本機亦無專用 MSSQL 測試目標，未執行真實 migration／資料保留 smoke。

@@ -65,15 +65,13 @@
 
 **需求追溯**：{{story_acceptance_fr_br_nfr_and_sc_ids}}
 
-| ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
+| ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：驗證層＋精確預期 |
 |---|---|---|---|---|---|---|---|
-| {{tp_case_id}} | {{spec_story_acceptance_fr_br_nfr_sc_ids}} | {{test_layer}} | {{analysis_output_operation_path_or_ui_test_entry}} | {{priority}} | {{named_fixture_and_case_specific_overrides}} | {{single_primary_operation}} | {{exact_observable_expected_values_and_outcome}} |
+| {{tp_case_id}} | {{spec_story_acceptance_fr_br_nfr_sc_ids}} | {{test_layer}} | {{analysis_output_operation_path_or_ui_test_entry}} | {{priority}} | {{named_fixture_and_case_specific_overrides}} | {{single_primary_operation}} | {{verification_depth_tag}} {{exact_observable_expected_values_and_outcome}} |
 
-<!-- 一列只表達一個主要測試意圖；不同操作或不同主要失敗原因應拆列，只有同一意圖的輸入變化才參數化。 -->
-<!-- Public seam 是測試實際呼叫的入口；實作參考只協助定位程式，不可把 internal call 當成通過條件。尚未實作時列契約 seam，實作符號標待建立／待確認。 -->
-<!-- Arrange 引用第 7 節具名 fixture，並列出本案例必要差異、身份／session／角色、stub 或時鐘控制；不依賴前一案例。 -->
-<!-- Assert 給單一精確結果或明確值；未定義的替代結果須先列為待決事項，不可留給 TDD 執行者選擇。 -->
-<!-- 每個 User Story 都是主要分組；依 spec 重複故事小節。每案例有唯一 TP ID、需求追溯與完整 3A。 -->
+<!-- 案例格式詳見 SKILL.md §通用約束。一列只表達一個主要測試意圖；不同操作或不同主要失敗原因應拆列。 -->
+<!-- Assert 必須以驗證層標記開頭：[response]、[response+state]、[response+side-effect]、[state-only]、[idempotent]。 -->
+<!-- 驗證層標記告訴 /tdd 執行者該測試需要驗證到什麼深度，避免只測回應碼而遺漏持久化或副作用驗證。 -->
 
 ## 6. 具名 Fixture 與環境
 
@@ -93,9 +91,18 @@
 - {{plan_review_and_ambiguity_gate}}
 - {{slice_interface_seam_and_red_gate}}
 
+### 快速狀態摘要（由最近一次 TDD 執行後更新）
+
+- **最後執行日期**：—
+- **已完成 TP**：（列出已 🟢／✅ 的 TP ID）
+- **進行中 TP**：（列出 🔴 的 TP ID 及紅燈原因）
+- **未啟動 TP**：（列出 ⬜ 的 TP ID）
+- **已知阻塞**：（列出影響後續的待確認／缺口）
+- **下一步建議**：（建議從哪個 TP 的哪個 TDD 步驟繼續）
+
 ### 新 session 啟動檢查
 
-- **先讀**：{{testplan_path_and_case_ids_for_this_slice}}
+- **先讀**：本節「快速狀態摘要」→ 第 10 節「執行狀態追蹤」→ {{testplan_path_and_case_ids_for_this_slice}}
 - **核對需求來源**：{{source_paths_versions_or_dates_requirement_ids_and_api_operations}}
 - **核對 Public seam**：{{seam_exists_and_contract_matches}}
 - **核對環境入口**：{{command_fixture_setup_and_required_nonsecret_configuration}}
@@ -112,5 +119,29 @@
 
 - {{unresolved_requirement_or_analysis_gap_or_none}}
 - {{scope_change_and_replan_rule}}
+
+## 10. 執行狀態追蹤
+
+> 由 `/tdd` 執行過程中回寫；初始狀態由 `/testplan` 產生時設為 ⬜ 未執行。
+
+| TP ID | 狀態 | 執行日期 | 紅燈驗證 | 綠燈驗證 | Assert 符合度 | 備註 |
+|---|---|---|---|---|---|---|
+| {{tp_case_id}} | ⬜ 未執行 | — | — | — | — | — |
+
+<!-- 狀態：⬜ 未執行 / 🔴 RED 通過 / 🟢 GREEN 通過 / ✅ 已驗收 / ❌ 失敗待修 -->
+<!-- Assert 符合度由 /tdd GREEN 階段填入：✅ 全覆蓋 / ⚠️ 部分覆蓋 / ❌ 有缺口 -->
+
+## 11. AI 自主決策與發現紀錄
+
+> 由 `/tdd` 執行過程中回寫；記錄 AI 在 TDD 過程中做出的 testplan 未預期的決策。
+
+| 日期 | TP 案例 | TDD 步驟 | 決策／發現內容 | 處置 |
+|---|---|---|---|---|
+| — | — | — | （初始為空；由 /tdd 執行過程中回寫） | — |
+
+<!-- 記錄規則：
+- AI 發現 testplan 未預期的情境、做出與計畫不同的設計選擇、或調整了 Assert 的具體驗證方式時，必須回寫此表。
+- 「處置」欄可為：已更新案例 / 已新增待確認 / 已回報使用者待決定。
+- 此表不取代正式案例；重大發現應升級為新的 TP 案例或待確認事項。 -->
 
 Constitution self-check: {{pass_or_exceptions}}

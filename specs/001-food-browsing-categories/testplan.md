@@ -54,13 +54,13 @@
 
 | ID | 需求追溯 | 測試層級 | Public seam：system-analysis 測試入口 | 優先級 | Arrange：fixture 與差異 | Act：單一操作 | Assert：精確預期 |
 |---|---|---|---|---|---|---|---|
-| TP-001 | US1 情境1、FR-001、FR-002、SC-001 | HTTP API | `GET /api/categories` (`listCategories`) | P1 | `FX-CATEGORIES-TWO`；兩個名稱可區分的分類 | 讀取分類列表 | 回 200；回應包含 fixture 中兩個分類及其識別／名稱 |
-| TP-002 | US1 情境1–3、FR-001–FR-002、SC-001–SC-002 | HTTP API | `GET /api/menu-items` (`listMenuItems`) | P1 | `FX-MENU-TWO-CATEGORIES`；兩分類各有不同餐點名稱、圖片 URL、價格與 category ID | 讀取餐點列表 | 每筆 `name`、`image_url`、`price`、`category_id`、`category_name` 對應同一 fixture 餐點；API 欄位採 `snake_case` |
-| TP-003 | US1 情境1–3、FR-002、SC-002 | UI 手動驗收 | `ui-plan.md` 的菜單瀏覽頁；瀏覽器開啟 `prototype/index.html` 驗收雛形，正式 UI 依 plan 的菜單頁流程 | P1 | `FX-MENU-TWO-CATEGORIES`；卡片圖片與價格均使用彼此可辨識值 | 開啟菜單瀏覽頁 | 每張卡片的名稱、圖片、價格、分類均與該餐點資料相符，不串列 |
-| TP-004 | US1 邊界情況、FR-002 | UI 手動驗收 | `ui-plan.md` 的菜單卡片及空值狀態 | P1 | `FX-MENU-MISSING-FIELDS`；分別準備缺圖片、價格、分類的餐點 | 呈現菜單頁 | 餐點卡保留；各缺值顯示明確提示／佔位，不偽造欄位或隱藏整筆餐點 |
-| TP-005 | US1 邊界情況、FR-001 | Frontend unit／UI 手動驗收 | `loadMenuData(fetcher)` (`frontend/src/menuApi.js`)；菜單瀏覽頁 | P1 | `FX-MENU-EMPTY`；categories 與 items 均為空陣列 | 載入菜單 | API client 回傳空 categories/items；UI 顯示空狀態且不呈現餐點卡 |
-| TP-006 | spec 邊界情況、分類篩選 | Browser UI | `MenuPage` 分類標籤 | P2 | 多分類且每類至少一筆餐點 | 切換分類 | 全部為預設；選取分類只顯示該類；分類標籤依名稱排序。已通過瀏覽器驗收。 |
-| TP-007 | API contract `listMenuItems` category filter | HTTP API | `GET /api/menu-items?category_id={category_id}` (`listMenuItems`) | P2 | `FX-MENU-TWO-CATEGORIES`；使用存在的分類 ID | 以 `category_id` 查詢菜單 | 回應只含所選分類的餐點；分類 ID 無效時的 400／空列表語意未固定，該邊界不在此案判定 |
+| TP-001 | US1 情境1、FR-001、FR-002、SC-001 | HTTP API | `GET /api/categories` (`listCategories`) | P1 | `FX-CATEGORIES-TWO`；兩個名稱可區分的分類 | 讀取分類列表 | [response] 回 200；回應包含 fixture 中兩個分類及其識別／名稱 |
+| TP-002 | US1 情境1–3、FR-001–FR-002、SC-001–SC-002 | HTTP API | `GET /api/menu-items` (`listMenuItems`) | P1 | `FX-MENU-TWO-CATEGORIES`；兩分類各有不同餐點名稱、圖片 URL、價格與 category ID | 讀取餐點列表 | [response] 每筆 `name`、`image_url`、`price`、`category_id`、`category_name` 對應同一 fixture 餐點；API 欄位採 `snake_case` |
+| TP-003 | US1 情境1–3、FR-002、SC-002 | UI 手動驗收 | `ui-plan.md` 的菜單瀏覽頁；瀏覽器開啟 `prototype/index.html` 驗收雛形，正式 UI 依 plan 的菜單頁流程 | P1 | `FX-MENU-TWO-CATEGORIES`；卡片圖片與價格均使用彼此可辨識值 | 開啟菜單瀏覽頁 | [response] 每張卡片的名稱、圖片、價格、分類均與該餐點資料相符，不串列 |
+| TP-004 | US1 邊界情況、FR-002 | UI 手動驗收 | `ui-plan.md` 的菜單卡片及空值狀態 | P1 | `FX-MENU-MISSING-FIELDS`；分別準備缺圖片、價格、分類的餐點 | 呈現菜單頁 | [response] 餐點卡保留；各缺值顯示明確提示／佔位，不偽造欄位或隱藏整筆餐點 |
+| TP-005 | US1 邊界情況、FR-001 | Frontend unit／UI 手動驗收 | `loadMenuData(fetcher)` (`frontend/src/menuApi.js`)；菜單瀏覽頁 | P1 | `FX-MENU-EMPTY`；categories 與 items 均為空陣列 | 載入菜單 | [response] API client 回傳空 categories/items；UI 顯示空狀態且不呈現餐點卡 |
+| TP-006 | spec 邊界情況、分類篩選 | Browser UI | `MenuPage` 分類標籤 | P2 | 多分類且每類至少一筆餐點 | 切換分類 | [response] 全部為預設；選取分類只顯示該類；分類標籤依名稱排序。已通過瀏覽器驗收。 |
+| TP-007 | API contract `listMenuItems` category filter | HTTP API | `GET /api/menu-items?category_id={category_id}` (`listMenuItems`) | P2 | `FX-MENU-TWO-CATEGORIES`；使用存在的分類 ID | 以 `category_id` 查詢菜單 | [response] 回應只含所選分類的餐點；分類 ID 無效時的 400／空列表語意未固定，該邊界不在此案判定 |
 
 ## 6. 具名 Fixture 與環境
 
@@ -79,6 +79,15 @@
 - **範圍註記**：plan 預期的 `http-api.yaml` 已存在於 feature 根目錄，不在 `contracts/` 子目錄。
 
 ## 7. 執行與交接
+
+### 快速狀態摘要
+
+- **最後執行日期**：既有摘要未記逐案日期
+- **已完成 TP**：TP-001–TP-007（既有執行摘要記錄通過）
+- **進行中 TP**：無
+- **未啟動 TP**：無
+- **已知阻塞**：無
+- **下一步建議**：審閱計畫；需求或分析入口改變時，先更新本計畫再進入 TDD。
 
 ### TDD 進入條件
 
@@ -105,7 +114,27 @@
 
 - 無。無效 `category_id` 依現行 API 契約回 400 `INVALID_CATEGORY_ID`，已加入並通過 API 驗收。
 
-## 10. 執行結果
+## 10. 執行狀態追蹤
+
+> 狀態依文件既有執行摘要回填；未記錄的逐案日期與 Assert 覆蓋度不推定。
+
+| TP ID | 狀態 | 執行日期 | 紅燈驗證 | 綠燈驗證 | Assert 符合度 | 備註 |
+|---|---|---|---|---|---|---|
+| TP-001 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-002 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-003 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-004 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-005 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-006 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+| TP-007 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
+
+## 11. AI 自主決策與發現紀錄
+
+| 日期 | TP 案例 | TDD 步驟 | 決策／發現內容 | 處置 |
+|---|---|---|---|---|
+| — | — | — | — | — |
+
+## 12. 執行結果（既有紀錄）
 
 - TP-001–TP-002、TP-007：後端 API 測試通過，含分類關聯、snake_case 欄位與有效／無效分類篩選。
 - TP-003–TP-006：瀏覽器驗收通過，含分類切換、缺圖片／價格／分類 fallback、空菜單、分類預設與排序。

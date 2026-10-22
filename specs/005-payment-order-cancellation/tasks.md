@@ -2,7 +2,7 @@
 
 **Feature directory**：`specs/005-payment-order-cancellation/`
 
-**Retroactive mapping note**：原行為 tasks 均已完成。本次保留已完成狀態，依 005 testplan 將測試／行為工作分類為單步 RED／GREEN；標籤只作回溯追溯，不證明歷史上的 TDD 時序。TP-006 金額 body policy 已對齊，T013 已完成並有 payment／integration tests。
+**Retroactive mapping note**：既有行為 tasks 保留完成狀態，單步 RED／GREEN 標籤僅作回溯追溯，不證明歷史 TDD 時序。TP-006 已完成；TP-010 的既有測試入口未列於 system-analysis，舊 T020／T021 不作為目前計畫核准驗收。新增 TP-027 尚待測試與驗證。
 
 **Spec 套件索引**（按需 READ）：
 
@@ -82,7 +82,7 @@
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
-| `testplan.md` | TP-007–TP-010 | `testplan:TP-007`; `testplan:TP-008`; `testplan:TP-009`; `testplan:TP-010` | failure/retry/idempotency/5xx |
+| `testplan.md` | TP-007–TP-010、TP-027 | `testplan:TP-007`; `testplan:TP-008`; `testplan:TP-009`; `testplan:TP-010`; `testplan:TP-027` | failure/retry/idempotency；TP-027 unknown pay body fields |
 | `research.md` | stub、付款冪等 | `research:模擬金流（stub）`; `research:付款冪等` | failure reason and only-paid mapping |
 | `data-model.dbml` | payment idempotency rows | `dbml:Table payment_idempotency_keys` | one successful mapping |
 
@@ -94,6 +94,8 @@
 - [x] T019 [US2] [TDD:GREEN] 實作／維持 TP-009 successful paid mapping replay ← `testplan:TP-009`; `spec:FR-012`; `research:付款冪等`; `dbml:Table payment_idempotency_keys`
 - [x] T020 [US2] [TDD:RED] 為 TP-010 pending 後 5xx 不寫 mapping、同 key 可重試建立測試 ← `testplan:TP-010`; `spec:US2·情境4`; `spec:FR-012`; `openapi:payOrder`
 - [x] T021 [US2] [TDD:GREEN] 實作／維持 TP-010 未 paid 的 5xx rollback／無成功 mapping 與安全 retry ← `testplan:TP-010`; `spec:FR-012`; `research:付款冪等`
+
+> TP-010 的 T020／T021 為既有歷史紀錄；目前 testplan 指出 fault-injection seam 未列於 system-analysis。不得將這些紀錄視為已核准驗收或在來源補齊前重跑此案例。
 
 ---
 
@@ -205,9 +207,24 @@
 - [x] T054 [US3] [TDD:RED] 為 TP-026 cancelled order pay 回 409 `ORDER_CANCELLED` 且狀態不變建立測試 ← `testplan:TP-026`; `spec:BR-003`; `openapi:payOrder`
 - [x] T055 [US3] [TDD:GREEN] 實作／維持 TP-026 已取消訂單付款拒絕 guard ← `testplan:TP-026`; `spec:BR-003`; `openapi:payOrder`
 
+## US2 Additional Verification: TP-027 payment body allowlist
+
+#### Backend
+
+**必讀對照**
+
+| 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
+|---|---|---|---|
+| `testplan.md` | US2 TP-027 不可信幣別／訂單識別欄位 | `testplan:TP-027` | 未定義 body 欄位回 400 且訂單狀態／快照不變 |
+| `spec.md` | FR-006 付款請求拒絕不可信欄位 | `spec:FR-006` | 幣別與訂單識別以伺服器契約／路徑為準 |
+| `contracts/http-api.yaml` | `payOrder`、`PayOrderRequest` allowlist | `openapi:payOrder`; `openapi:components.schemas.PayOrderRequest` | 僅接受 schema 明列欄位 |
+
+- [x] T056 [US2] [NON-TDD] 在 `backend/src/__tests__/orders/payment-pay.test.js` 補上未知 `currency`／替代訂單識別欄位的參數化回歸測試，並驗證回 400、付款服務未執行且訂單狀態／快照不變；付款 route 已有 allowlist，因此本任務僅補測試、不預期修改產品行為 ← `testplan:TP-027`; `spec:FR-006`; `openapi:payOrder`; `openapi:components.schemas.PayOrderRequest`
+
 ## Dependencies & Execution Order
 
 - 每個 RED 必須先驗證預期失敗，再執行同 TP 的 GREEN；REFACTOR 未列表示無需重構。
+- TP-010 暫停至 plan／API analysis 指定故障注入 seam；T056 僅補 TP-027 的回歸覆蓋，不改變產品行為。
 - TP-006 對應 T013 已完成：PayOrderRequest 明列相容金額／items 欄位並忽略，僅使用 server snapshot。
 - Setup/Foundation、migration 核對、UI manual walkthrough 等非行為工作為 `[NON-TDD]`。
 - `[x]` 沿用歷史完成狀態；回溯標籤不宣稱歷史 TDD 時序。
@@ -218,4 +235,4 @@
 - 行為 task 恰有一個 TDD step marker；非行為 task 使用 `[NON-TDD]` 並說明原因。
 - 每個有任務端點小節均有四欄 Binding，所有表列由任務錨點引用。
 
-Constitution self-check: exception — real MSSQL migration／prior-data preservation smoke remains unverified because no isolated SQL Server test target is configured.
+Constitution self-check: exceptions — TP-010 故障注入 seam 未列入 system-analysis；real MSSQL migration／prior-data preservation smoke 仍因沒有隔離 SQL Server 測試目標而未驗證。

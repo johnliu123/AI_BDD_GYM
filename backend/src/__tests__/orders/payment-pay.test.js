@@ -4,6 +4,7 @@ import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import {
   addSampleCartItem,
   bootstrapCartSession,
+  countPaymentIdempotencyKeys,
   forceOrderPaymentStatus,
   getOrderForSession,
   postCreateOrder,
@@ -60,6 +61,36 @@ test('POST pay ignores client amounts and preserves the paid order snapshot', as
   assert.equal(fetched.body.order.items[0].unit_price, '220.00');
   assert.equal(fetched.body.order.items[0].line_total, '220.00');
 });
+
+for (const [field, value] of [['currency', 'USD'], ['order_id', 'different-order']]) {
+  test(`POST pay rejects unknown ${field} without invoking payment or changing the order`, async () => {
+    const { session, orderNumber } = await createUnpaidOrder();
+    const before = await getOrderForSession(app, session, orderNumber);
+    const mappingCount = await countPaymentIdempotencyKeys();
+    const previousAllow = process.env.ALLOW_PAYMENT_SIMULATE_BODY;
+    process.env.ALLOW_PAYMENT_SIMULATE_BODY = 'true';
+
+    let attempt;
+    try {
+      attempt = await postPayOrder(app, session, orderNumber, {
+        idempotencyKey: `rejected-${field}-${orderNumber}`,
+        body: { simulate_outcome: 'failure', [field]: value },
+      });
+    } finally {
+      if (previousAllow === undefined) delete process.env.ALLOW_PAYMENT_SIMULATE_BODY;
+      else process.env.ALLOW_PAYMENT_SIMULATE_BODY = previousAllow;
+    }
+
+    assert.equal(attempt.status, 400);
+    assert.equal(attempt.body.error.code, 'INVALID_REQUEST_BODY');
+
+    const after = await getOrderForSession(app, session, orderNumber);
+    assert.equal(after.body.order.payment_status, 'unpaid');
+    assert.equal(after.body.order.total, before.body.order.total);
+    assert.deepEqual(after.body.order.items, before.body.order.items);
+    assert.equal(await countPaymentIdempotencyKeys(), mappingCount);
+  });
+}
 
 test('POST pay returns 409 ORDER_ALREADY_PAID when already paid', async () => {
   const { session, orderNumber } = await createUnpaidOrder();

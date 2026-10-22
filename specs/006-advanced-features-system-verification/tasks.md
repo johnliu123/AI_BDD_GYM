@@ -2,7 +2,7 @@
 
 **Feature directory**：`specs/006-advanced-features-system-verification/`
 
-**Retroactive mapping note**：既有行為任務依 `testplan.md` 回溯分類為單步 RED／GREEN；標籤不證明歷史上已按 TDD 時序執行。TP-013／TP-019／TP-023 的契約／測試入口對齊已完成；TP-028 真實 SQL Server 資料保留驗證仍未完成。
+**Retroactive mapping note**：既有行為任務依 `testplan.md` 回溯分類為單步 RED／GREEN；標籤不證明歷史上已按 TDD 時序執行。TP-013／TP-023 已有歷史驗收紀錄；TP-019 目前因 system-analysis 未指定安全觸發 seam 而阻塞，TP-028 真實 SQL Server 資料保留驗證仍未完成。
 
 **測試基線**：同目錄 `testplan.md`（TP-001–TP-028）；不可自行改寫其 Assert 或增加未規劃行為。
 
@@ -22,7 +22,7 @@
 | `../004.../contracts/http-api.yaml` | merchant serving operations |
 | `../005.../contracts/http-api.yaml` | payment operations |
 
-**任務標籤**：每項行為 task 恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]`；每步另列 task。純環境／CI 驗證及人工 walkthrough 標 `[NON-TDD]` 並說明原因。TP-013／019／023 不可進入 TDD，直到其來源／seam 對齊。
+**任務標籤**：每項行為 task 恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]`；每步另列 task。純環境／CI 驗證及人工 walkthrough 標 `[NON-TDD]` 並說明原因。TP-019 暫停至 system-analysis 指定可用 seam；既有 T046 只保留歷史紀錄，不作為驗收入口。
 
 ## Phase 1: Setup
 
@@ -211,7 +211,7 @@
 - [x] T043 [US5] [TDD:GREEN] 實作／維持 TP-017 predictable error response shape ← `testplan:TP-017`; `spec:FR-016`; `spec:NFR-010`; `research:集中式 HTTP 例外處理`
 - [x] T044 [US5] [TDD:RED] 為 TP-018 unknown `/api/*` route JSON 404/no leakage 建立測試 ← `testplan:TP-018`; `spec:FR-017`; `spec:NFR-010`; `openapi:components.responses.NotFound`
 - [x] T045 [US5] [TDD:GREEN] 實作／維持 TP-018 JSON `NOT_FOUND` handler ← `testplan:TP-018`; `spec:FR-017`; `research:集中式 HTTP 例外處理`
-- [x] T046 [NON-TDD] 完成 TP-019 安全測試入口對齊：沿用僅在 `ENABLE_HTTP_ERROR_TEST_ROUTES=1` 啟用的 test-only error route；以 log spy 與 fetch spy 驗證敏感資訊只記錄於本機、response 遮罩且無遠端呼叫；production 不註冊該 route ← `testplan:TP-019`; `spec:NFR-010`; `spec:NFR-011`; `plan:端點盤點`
+- [x] T046 [NON-TDD] 歷史紀錄：曾以 `ENABLE_HTTP_ERROR_TEST_ROUTES=1` 驗證 test-only error route；此 route 未列於 system-analysis，不作為 TP-019 的核准 seam／驗收。待 plan／API analysis 補齊安全觸發入口後再重驗 ← `testplan:TP-019`; `spec:NFR-010`; `spec:NFR-011`; `plan:端點盤點`
 
 #### Frontend
 
@@ -254,7 +254,7 @@
 ## Dependencies & Execution Order
 
 - 每個 TDD RED 僅建立一個 TP case test；同 TP GREEN 僅實作該紅燈要求的最小行為；REFACTOR 可選且需在相關 tests 綠燈後。
-- TP-013、TP-019、TP-023 的契約／測試入口對齊已完成並有測試證據；TP-028 真實 SQL Server migration smoke 需專用測試資料庫。
+- TP-013、TP-023 保留歷史驗收紀錄；TP-019 的錯誤觸發 seam 未列於 system-analysis，且 testplan 的 NFR-010 對照仍有重複／矛盾敘述，須先修正來源並確認後再驗收；TP-028 真實 SQL Server migration smoke 需專用測試資料庫。
 - CI／migration 命令及基礎環境核對為 NON-TDD，需保留理由。
 - `[x]` 保留舊完成狀態；新 TDD tags 是回溯映射，不證明歷史時序。
 
@@ -264,4 +264,4 @@
 - 每個行為 task 恰有一個 TDD marker；非行為 task 有 `[NON-TDD]` 及理由。
 - 各實際端點 subsection 有四欄 Binding；每一列都被 task anchor 覆蓋。
 
-Constitution self-check: exception — T059 awaits an isolated MSSQL test target for the prior-data preservation smoke.
+Constitution self-check: exceptions — TP-019 seam／NFR 對照仍待上游釐清；T059／TP-028 awaits an isolated MSSQL test target for the prior-data preservation smoke.

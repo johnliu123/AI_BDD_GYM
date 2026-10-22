@@ -2,7 +2,7 @@
 
 **Feature directory**: `specs/001-food-browsing-categories/`
 
-**Retroactive mapping note**：既有 tasks 均已完成。本次依 testplan 將已存在的測試／行為回溯標上單步 TDD 類型；`[x]` 保留既有完成狀態，標籤不代表本文件證明了歷史 RED 先於 GREEN。TP-006 待 UI Plan 對齊，保留未完成的非行為前置任務。
+**Retroactive mapping note**：既有 tasks 均已完成。本次依 testplan 將已存在的測試／行為回溯標上單步 TDD 類型；`[x]` 保留既有完成狀態，標籤不代表本文件證明了歷史 RED 先於 GREEN。TP-006 的分類篩選政策已與 UI Plan、spec 及 testplan 對齊。
 
 **Spec 套件索引**（按需 READ）：
 
@@ -91,7 +91,7 @@
 - [x] T012 [US1] [TDD:GREEN] 維持 TP-005 空資料呈現為空菜單狀態，不建立餐點卡 ← `testplan:TP-005`; `spec:FR-001`; `ui-plan:§畫面與流程`
 - [x] T013 [NON-TDD] 完成 TP-006 分類篩選政策對齊：全部為預設、按分類篩選、分類按名稱排序；已更新 UI Plan 與 testplan，並完成正式前端瀏覽器驗收 ← `testplan:TP-006`; `spec:US1`; `ui-plan:§畫面與流程`
 
-**Checkpoint**：TP-001–TP-005 回溯對照完成；TP-006 等上游 UI Plan 對齊。
+**Checkpoint**：TP-001–TP-006 對照完成；分類預設、篩選及排序政策與 UI Plan、spec、testplan 一致。
 
 ## Format Validation
 
@@ -100,4 +100,4 @@
 - 每個有任務端點小節均有四欄 Binding 表；每列均由任務 `←` 引用。
 - 回溯整理不宣稱本文件證明過往 RED 先於 GREEN。
 
-Constitution self-check: exceptions — TP-006 上游 UI Plan／spec 分類篩選決策未對齊。
+Constitution self-check: pass.
