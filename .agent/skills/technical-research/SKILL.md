@@ -12,10 +12,11 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 1 -- 確認規格與研究範圍
 
-1. READ 讀取 `/specify` 產出的完整規格（含 `## 澄清紀錄` 與更新後正文）、若曾執行則含 `/clarify-over-specs` 的澄清結論，以及專案中與本次功能直接相關的技術文件；以規格及使用者確認內容作為需求邊界，不自行修改或擴張功能需求。
-2. READ 讀取 `templates/research.template.md`、`templates/research.example.md`、`templates/techstack.template.md` 與 `templates/techstack.example.md`，確認兩份產物的格式、內容粒度與差異。
-3. THINK 將規格中的明確限制與待研究的技術決策分開，聚焦於會影響本次實作的架構、技術、資料、介面、部署及品質選擇；不為規格中已定案且無須查核的事項重複研究。
-4. THINK 若規格有未解決且會改變功能範圍或驗收結果的高影響缺口，先透過 `/clarify` 收斂；若只是技術選項尚未決定，保留為研究問題並比較方案，不把建議寫成已確認需求。
+1. READ `../../references/plan-truth-workflow.md`、`../../references/Rule-Truth-Owner-Inventory-and-Delta.md`；令 `PLAN_DIR` = 輸入 `spec.md` 所在目錄（須在 `specs/plans/` 下），`TRUTH_ROOT` = `specs/truth/`。
+2. READ 讀取 `/specify` 產出的完整規格（含 `## 澄清紀錄` 與更新後正文）、若曾執行則含 `/clarify-over-specs` 的澄清結論，以及專案中與本次功能直接相關的技術文件；以規格及使用者確認內容作為需求邊界，不自行修改或擴張功能需求。
+3. READ 讀取 `templates/research.template.md`、`templates/research.example.md`、`templates/techstack.template.md` 與 `templates/techstack.example.md`，確認兩份產物的格式、內容粒度與差異。
+4. THINK 將規格中的明確限制與待研究的技術決策分開，聚焦於會影響本次實作的架構、技術、資料、介面、部署及品質選擇；不為規格中已定案且無須查核的事項重複研究。
+5. THINK 若規格有未解決且會改變功能範圍或驗收結果的高影響缺口，先透過 `/clarify` 收斂；若只是技術選項尚未決定，保留為研究問題並比較方案，不把建議寫成已確認需求。
 
 ### Phase 2 -- 查核技術方案與證據
 
@@ -26,17 +27,19 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 3 -- 產出研究文件與技術堆疊摘要
 
-1. THINK 依專案既有慣例決定輸出位置；若沒有慣例，將 `research.md` 與 `techstack.md` 放在輸入規格所在目錄。若目標檔案已存在，先讀取並整合既有內容，不可未檢查就覆寫。
+1. EXEC **Truth owner Phase 0–1**（Inventory、Delta；含 DEL／破壞性 MOD 之 `/clarify` 閘門，見 Rule-Truth-Owner）。
+2. THINK `research.md` 寫入 **`PLAN_DIR/research.md`**；`techstack.md` 權威寫入 **`TRUTH_ROOT/techstack.md`**（若已存在先 READ 再整合）。禁止在 `PLAN_DIR` 留 `techstack.md` 副本。
 2. READ 若本次需要撰寫 `research.md` 或 `techstack.md`，讀取 `rules/Rule-研究證據與結論.md`。
 3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`research.md`）。
 4. WRITE 依 `templates/research.template.md` 撰寫 `research.md`，詳述各技術決策的 Decision、Rationale、Alternatives considered；必要時補上 Failure handling，並附上可追溯的技術參考與明確已確認需求。於文件開頭連結輸入規格，並為每項已確認需求標示其規格依據；依實際研究項目增減決策、參考及需求項目，不保留空白或佔位符；產物 MUST 以憲法為最高優先。
 5. EXEC **Phase Load**（artifact=`techstack.md`）。
-6. WRITE 依 `templates/techstack.template.md` 撰寫 `techstack.md`，提供整體架構摘要及技術堆疊表，列明領域、採用技術／決策、用途、版本或限制，並連結輸入規格；補充部署限制與尚未固定的版本／選項。技術堆疊只列研究文件明確採用的決策，各列須能連回研究文件中的對應決策；尚未確認的建議另列為未決事項，不可列作已採用。可選章節沒有內容時，明確標示「無」，不可留下空章節。此摘要不得創造研究文件中沒有的新選型或複製完整比較論證；產物 MUST 以憲法為最高優先。
+6. WRITE 依 `templates/techstack.template.md` 撰寫 **`TRUTH_ROOT/techstack.md`**，提供整體架構摘要及技術堆疊表，列明領域、採用技術／決策、用途、版本或限制，並連結 `PLAN_DIR/spec.md`；補充部署限制與尚未固定的版本／選項。技術堆疊只列研究文件明確採用的決策，各列須能連回 `PLAN_DIR/research.md` 中的對應決策；尚未確認的建議另列為未決事項，不可列作已採用。可選章節沒有內容時，明確標示「無」，不可留下空章節。此摘要不得創造研究文件中沒有的新選型或複製完整比較論證；產物 MUST 以憲法為最高優先。
+7. EXEC **Truth owner Phase 2**（Apply Truth）完成後，EXEC **Truth owner Phase 3**：DELEGATE **`/truth-delta`**（`owner_skill_id: technical-research`，一次傳入本輪完整 `entries[]`；見 `../truth-delta/SKILL.md`）。
 
 ### Phase 4 -- 驗證並交付
 
 1. READ 對照規格、`research.md` 與 `techstack.md`，確認技術決策符合需求邊界，技術堆疊每一列都可追溯至研究文件，來源支持相關事實與版本資訊，且未知事項及建議未被表述成已確認決策。
 2. THINK 檢查兩份 Markdown 結構完整、來源規格與研究決策連結均指向正確目標、沒有未替換佔位符或空白項目，且架構摘要、詳細理由與部署限制彼此一致；修正發現的問題後重新檢查。
 3. EXEC **Phase Self-check**（artifact=`research.md`）；EXEC **Phase Self-check**（artifact=`techstack.md`）。
-4. WRITE 回報兩份產物的路徑、主要技術決策、尚未固定的選項、無法查核的限制，以及各 artifact 的 `Constitution self-check`（格式見 artifact-overlay-sop）。
+4. WRITE 回報 `PLAN_DIR/research.md`、`TRUTH_ROOT/techstack.md`、`truth-delta.md` §technical-research 新增列、主要技術決策、尚未固定的選項、無法查核的限制，以及各 artifact 的 `Constitution self-check`（格式見 artifact-overlay-sop）。
 5. WRITE 建議下一指令：預設 **`/system-analysis`**（主流程見 `../../references/sdd-primary-workflow.md`）。

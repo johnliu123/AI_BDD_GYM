@@ -13,6 +13,7 @@
     "smoke:006": "node scripts/smoke-006-advanced.mjs",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "smoke:mssql:005": "node scripts/smoke-mssql-005.mjs",
+    "smoke:mssql:028": "node scripts/smoke-mssql-028.mjs",
     "audit:sca": "npm audit --audit-level=moderate --strict-ssl=false"
   },
   "dependencies": {

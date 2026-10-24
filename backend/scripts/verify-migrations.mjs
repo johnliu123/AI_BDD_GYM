@@ -1,6 +1,6 @@
 /**
- * 驗證 migrations/*.mssql.sql 可解析，且 005 含預期 DDL（無需連線 MSSQL）。
- * CI 預設執行；見 specs/005-payment-order-cancellation/techstack.md §005 smoke。
+ * 驗證 migrations/*.mssql.sql 可解析，且 005／006 含預期 DDL（無需連線 MSSQL）。
+ * 真實 MSSQL 舊訂單資料保留見 `smoke-mssql-028.mjs`（TP-028）；CI 預設執行本腳本。
  */
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';

@@ -15,10 +15,11 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 ### Phase 1 -- 收斂需求與專案脈絡
 
 1. READ 讀取使用者需求、已確認的功能規格與澄清結果；檢視儲存庫的現有目錄結構與專案慣例。
-2. READ 讀取 `rules/Rule-研究產物前置閘門.md`；在 `spec.md` 所在目錄確認 `research.md` 與 `techstack.md` 存在（或使用者提供兩檔路徑）。任缺且無 Rule 1 豁免時 **STOP**，請先 `/technical-research`。
-3. READ 讀取上述 `research.md` 與 `techstack.md`（至少決策摘要與堆疊表，供後續 Wave 對齊）。
-4. THINK 區分已確認需求、明示限制、技術研究已採用決策與未決事項；若存在會改變功能範圍或計畫結構的高影響缺口，先透過 `/clarify` 收斂，未取得回答前停止。
-5. THINK 依規格、研究產物與現有專案脈絡整理實作計畫所需的專案結構及設計決策；不得把未確認假設或未寫入 research 的建議描述成已採用決策。
+2. READ `../../references/plan-truth-workflow.md`；令 `PLAN_DIR` = `spec.md` 所在目錄，`TRUTH_ROOT` = `specs/truth/`。
+3. READ 讀取 `rules/Rule-研究產物前置閘門.md`；確認 `PLAN_DIR/research.md` 與 `TRUTH_ROOT/techstack.md` 存在（或使用者提供路徑）。任缺且無 Rule 1 豁免時 **STOP**，請先 `/technical-research`。
+4. READ 讀取上述 `research.md` 與 `techstack.md`（至少決策摘要與堆疊表，供後續 Wave 對齊）。
+5. THINK 區分已確認需求、明示限制、技術研究已採用決策與未決事項；若存在會改變功能範圍或計畫結構的高影響缺口，先透過 `/clarify` 收斂，未取得回答前停止。
+6. THINK 依規格、研究產物與現有專案脈絡整理實作計畫所需的專案結構及設計決策；不得把未確認假設或未寫入 research 的建議描述成已採用決策。
 
 ### Phase 2 -- 規劃需求部位、端點與分析 Wave
 
@@ -51,4 +52,4 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 3. THINK 各端點分析產物須含受派 skill 回報的 `Constitution self-check`；缺漏視為該產物未完成。
 4. EXEC **Phase Self-check**（artifact=`plan.md`）。
 5. WRITE 回報 `plan.md` 路徑、端點至 Skill 的委派對照、Wave 執行狀態、各分析產物路徑與其 Constitution self-check、未完成工作、待確認事項或失敗原因，以及本 skill 對 `plan.md` 的 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
-6. WRITE 建議下一指令：預設 **`/testplan`**（主流程見 `../../references/sdd-primary-workflow.md`）；testplan 完成後再由 `/tasks` 依 TP 案例切分任務。
+6. WRITE 建議下一指令：預設 **`/dsl-refine`**（主流程見 `../../references/sdd-primary-workflow.md`），完成 interface Feature／DSL 與 acceptance traceability 後由 `/tasks` 依 Scenario 拆 BDD 任務；明確沿用 legacy testplan/TDD 的 feature 套件才建議 `/testplan`。

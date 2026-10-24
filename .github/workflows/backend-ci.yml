@@ -74,3 +74,4 @@ jobs:
           echo "SQL Server did not become ready"
           exit 1
       - run: npm run smoke:mssql:005
+      - run: npm run smoke:mssql:028

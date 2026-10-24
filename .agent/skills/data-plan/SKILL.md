@@ -14,7 +14,8 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 1 -- 確認輸入與分析邊界
 
-1. READ 讀取功能規格、`plan.md`、研究文件、委派指令中的端點清單（如 MySQL、私有檔案儲存）與分析邊界，以及前置產物；若 `data-model.dbml` 已存在，先讀取以便整合。
+1. READ `../../references/plan-truth-workflow.md`、`../../references/Rule-Truth-Owner-Inventory-and-Delta.md`；預設輸出 **`TRUTH_ROOT/data/data-model.dbml`**。
+2. READ 讀取功能規格、`plan.md`、研究文件、委派指令中的端點清單（如 MySQL、私有檔案儲存）與分析邊界，以及前置產物；若 Truth DBML 已存在，先 READ 以便整合。
 2. READ 讀取 `rules/Rule-Data-分析邊界與追溯.md`。
 3. THINK 區分結構化中繼資料與二進位／檔案儲存責任；對齊 plan 中的設計決策（transaction、清理、排序持久化等）。
 4. THINK 高影響缺口（實體歸屬、唯一性、生命週期、合規刪除）無法安全假設時，透過 `/clarify` 收斂後再繼續。
@@ -28,15 +29,17 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 3 -- 產出 data-model.dbml
 
-1. THINK 依專案慣例或委派指令決定輸出路徑；預設與 `plan.md` 同目錄下的 `data-model.dbml`。
-2. READ 讀取 `templates/data-model.template.dbml` 與 `templates/data-model.example.dbml`，確認 `Project` 追溯註解、表結構、`Ref`／索引與非關聯端點 Note 的寫法。
-3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`data-model.dbml`）。
-4. WRITE 依模板撰寫有效 DBML；補齊 `Table`／`indexes`／`Ref`，移除所有 `{{}}` 佔位符；檔案儲存等端點寫在 `Project Note` 或 `//` 分節；產物 MUST 以憲法為最高優先。
-5. WRITE 整合既有內容時保持單一一致模型；衝突須釐清，不得靜默覆蓋。
+1. EXEC **Truth owner Phase 0–1**（Inventory、Delta；DEL／破壞性 MOD 須 `/clarify`）。
+2. THINK 輸出路徑 MUST 為 **`TRUTH_ROOT/data/data-model.dbml`**；禁止寫入 `PLAN_DIR/data-model.dbml`。
+3. READ 讀取 `templates/data-model.template.dbml` 與 `templates/data-model.example.dbml`，確認 `Project` 追溯註解、表結構、`Ref`／索引與非關聯端點 Note 的寫法。
+4. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`data-model.dbml`）。
+5. WRITE 依模板撰寫有效 DBML；補齊 `Table`／`indexes`／`Ref`，移除所有 `{{}}` 佔位符；檔案儲存等端點寫在 `Project Note` 或 `//` 分節；產物 MUST 以憲法為最高優先。
+6. WRITE 整合既有內容時保持單一一致模型；衝突須釐清，不得靜默覆蓋。
+7. EXEC Apply Truth 後 DELEGATE **`/truth-delta`**（`owner_skill_id: data-plan`，本輪完整 `entries[]`）。
 
 ### Phase 4 -- 驗證並交付
 
 1. READ 對照規格、委派邊界與 plan 設計決策，確認每個受派資料端點皆有分析，且未寫入 API 或 UI 細節。
 2. THINK 檢查實體與儲存決策可支援 plan 中的持久化與失敗處理敘述。
 3. EXEC **Phase Self-check**（artifact=`data-model.dbml`）。
-4. WRITE 回報產物路徑、涵蓋端點、待確認事項、供 `/api-plan` 參考的關鍵持久化契約摘要，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+4. WRITE 回報 `TRUTH_ROOT/data/data-model.dbml`、`truth-delta.md` §data-plan 新增列、涵蓋端點、待確認事項、供 `/api-plan` 參考的關鍵持久化契約摘要，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。

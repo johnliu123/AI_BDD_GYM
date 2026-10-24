@@ -1,10 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import express from 'express';
 import request from 'supertest';
+import { errorMiddleware, notFoundHandler } from '../../middleware/errorMiddleware.js';
 import { setupTestDatabase } from '../../test-utils/testHarness.js';
 import { bootstrapCartSession, createSampleOrder, merchantPost } from '../testHelpers.js';
 
-process.env.ENABLE_HTTP_ERROR_TEST_ROUTES = '1';
+function createErrorTestApp() {
+  const testApp = express();
+  testApp.get('/synthetic-error', (req, res, next) => {
+    next(new Error(String(req.query.message || 'simulated failure')));
+  });
+  testApp.use(notFoundHandler);
+  testApp.use(errorMiddleware);
+  return testApp;
+}
 
 test.before(async () => {
   await setupTestDatabase();
@@ -29,6 +39,7 @@ test('invalid JSON body returns 400 INVALID_REQUEST_BODY', async () => {
 });
 
 test('internal error is sanitized, logged locally, and makes no remote call', async () => {
+  const errorTestApp = createErrorTestApp();
   const originalConsoleError = console.error;
   const originalFetch = globalThis.fetch;
   const logLines = [];
@@ -40,8 +51,8 @@ test('internal error is sanitized, logged locally, and makes no remote call', as
   };
   let response;
   try {
-    response = await request(app)
-      .get('/api/_test/internal-error')
+    response = await request(errorTestApp)
+      .get('/synthetic-error')
       .query({ message: 'SELECT * FROM private_table password=hidden C:\\private\\service.js' });
   } finally {
     console.error = originalConsoleError;

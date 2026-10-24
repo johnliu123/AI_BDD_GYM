@@ -8,7 +8,8 @@ applies_to: spec.md, plan.md, testplan.md, tasks.md, ui-plan.md
 - User Story 以 **`User Story N`** 或 template 既定標題層級呈現；故事內引用全域需求時使用「全域需求參照：FR-xxx」，不另造重複 ID 描述同一需求。
 - `testplan.md` 以 spec 既有 User Story 與 FR／NFR／BR／SC ID 追溯需求；測試案例使用唯一 `TP-xxx` ID，不以 TP ID 取代需求 ID。
 - `tasks.md` 機器錨點引用 spec 時使用 `spec:FR-001`、`spec:US1`、`spec:US1·情境2` 等格式，與 `Rule-Tasks-端點分層與按需讀取.md` 一致。
-- `tasks.md` 追溯 testplan 案例時使用 `testplan:TP-001` 格式；不得把該錨點當成正式需求 ID。
+- BDD 主模式的 `tasks.md` 以 `feature:<相對路徑>#<Scenario 標題>` 與 `dsl:<相對路徑>#<DSL 句型>` 定位測試契約，並另以 `spec:` 錨點追溯正式需求；Feature／DSL 錨點不得取代正式需求 ID。
+- Legacy TDD 模式的 `tasks.md` 追溯 testplan 案例時使用 `testplan:TP-001` 格式；不得把該錨點當成正式需求 ID。
 - `plan.md` 提及需求或故事時，須可對應到 `spec.md` 中既有 ID 或故事編號（不得引入未在 spec 出現的正式需求 ID）。
 
 ## MUST NOT
@@ -20,5 +21,6 @@ applies_to: spec.md, plan.md, testplan.md, tasks.md, ui-plan.md
 
 - [ ] spec 內 ID 唯一且跨文件引用一致
 - [ ] plan／tasks 出現的需求指涉可追溯到 spec ID 或 US 編號
-- [ ] testplan TP ID 唯一，tasks 的 testplan 錨點可對應到 testplan.md
+- [ ] BDD 任務的 Feature／DSL 錨點可唯一定位目標 Scenario 與句型，需求仍對應 spec ID
+- [ ] 若採 legacy TDD 模式，testplan TP ID 唯一，tasks 的 testplan 錨點可對應到 testplan.md
 - [ ] tasks 錨點前綴符合上表

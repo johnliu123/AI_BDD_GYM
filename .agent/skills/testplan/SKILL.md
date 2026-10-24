@@ -1,11 +1,11 @@
 ---
 name: testplan
-description: "在系統分析完成後，依 User Story 與 FR/NFR 規劃測試案例；測試入口只取自 system-analysis 產物，產生可供 /tasks 追溯的 testplan.md。"
+description: "Legacy workflow：僅在明確沿用 testplan/TDD 的既有套件時，依 User Story 與 FR/NFR 產生供 /tasks 與 /tdd 使用的 testplan.md；新主流程改以 dsl-refine 的 Feature／DSL 為測試來源。"
 ---
 
 # Test Plan Engineering
 
-在 `/system-analysis` 之後、`/tasks` 之前，依 `spec.md` 的 User Story、驗收條件、FR、NFR、BR 與 SC 制定獨立 `testplan.md`。以 User Story 為主要分組，涵蓋適用的 FR 與 NFR，並以 `TP-xxx` 案例 ID 提供後續任務的穩定追溯點。
+本 Skill 僅供明確沿用 legacy testplan/TDD workflow 的既有 feature 套件使用。新主流程在 `/system-analysis` 後執行 `/dsl-refine`，以 interface Feature／DSL 與 acceptance traceability 作為 BDD 任務來源，不要求產生 `testplan.md`。Legacy 模式仍依 `spec.md` 的 User Story、驗收條件、FR、NFR、BR 與 SC 制定 `testplan.md`，以 TP 案例 ID 提供舊版 `/tasks`、`/implement` 與 `/tdd` 的追溯點。
 
 此 skill 規劃測試，不撰寫測試程式、不執行 RED／GREEN／REFACTOR、不修改 `/tdd`，也不取代其單一垂直切片流程。單一小型 bug 或已存在且未受需求變更影響的測試計畫，不必強制重做完整計畫。
 
@@ -59,5 +59,5 @@ description: "在系統分析完成後，依 User Story 與 FR/NFR 規劃測試�
 1. WRITE 向使用者摘要計畫路徑、涵蓋的介面／功能、P0 風險與待決事項，提供 `testplan.md` 審閱。
 2. THINK 若使用者指出測試範圍、案例結構或驗收語意需調整，更新計畫並重新檢查追溯；在高影響差異解決前，不宣稱計畫已核准。
 3. WRITE 計畫審閱後，交接給 `/tasks`；tasks 必須引用每個 TP 案例，並將行為開發拆為單步 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]` 任務。
-4. THINK `/implement` 對 TDD 標記任務逐項呼叫 `/tdd` 並傳入明確步驟及 **`testplan.md` 路徑**；本 skill 不執行測試程式撰寫或 RED／GREEN／REFACTOR。
+4. THINK Legacy `/implement` 對 TDD 標記任務逐項呼叫 `/tdd` 並傳入明確步驟及 **`testplan.md` 路徑**；本 skill 不執行測試程式撰寫或 RED／GREEN／REFACTOR。新 BDD 主流程不經過本交接。
 5. THINK 新 session 執行時，先讀第 7 節「快速狀態摘要」與第 10 節「執行狀態追蹤」定位進度；若來源語意、分析入口、案例目標或高影響事項已改變，先停止並更新／確認 testplan；不得自行改寫案例意圖。

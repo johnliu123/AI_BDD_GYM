@@ -2,6 +2,7 @@
 
 **FEATURE_DIR**: `specs/001-photo-album-organizer/`  
 **分析時間**: `2026-03-10T14:00:00+08:00`  
+**任務模式**: `Legacy TDD`  
 **已載入**: `spec.md`, `plan.md`, `tasks.md`（按需：`contracts/http-api.yaml` 標題掃描）  
 **validate_spec.py**: `pass`  
 

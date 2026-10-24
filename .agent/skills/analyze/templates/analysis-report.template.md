@@ -2,6 +2,7 @@
 
 **FEATURE_DIR**: `{path}`  
 **分析時間**: `{ISO8601}`  
+**任務模式**: `{BDD|Legacy TDD}`  
 **已載入**: `{file list}`  
 **validate_spec.py**: `{pass|fail|skipped}`  
 
@@ -15,9 +16,9 @@
 
 ## 覆蓋摘要
 
-| 追溯鍵（需求／TP） | 有任務？ | 任務 ID | 備註 |
+| 追溯鍵（需求／Example／legacy TP） | 有任務？ | 任務 ID | 備註 |
 |--------|----------|---------|------|
-| {FR-001} | {是/否} | {T012, …} | |
+| {FR-001／Feature Example／legacy TP-001} | {是/否} | {T012, …} | {BDD 模式列 RED/GREEN 與 Feature File Phase；legacy 模式列 TP 覆蓋} |
 
 ## 憲法對齊問題
 

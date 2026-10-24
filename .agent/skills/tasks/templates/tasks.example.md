@@ -1,20 +1,26 @@
 # 任務：點餐系統第六迭代－進階功能與系統驗證
 
-**輸入**：設計文件位於 `specs/006-advanced-features-system-verification/`
+**Plan directory (PLAN_DIR)**：`specs/plans/006-advanced-features-system-verification/`
+
+**Truth root (TRUTH_ROOT)**：`specs/truth/`
+
+**模式**：Legacy TDD（相容既有 `testplan.md` 與 `/tdd` 任務；Plan／Truth 路徑與 BDD 主線一致）
 
 **測試基線**：`testplan.md`（TP-001–TP-015）；任務依測試計畫切片，不另行推導測試範圍。
 
 **Spec 套件索引**（按需 READ）：
 
-| 文件 | 用途 |
-|---|---|
-| `spec.md` | User Story、驗收、FR／NFR／BR／SC |
-| `testplan.md` | TP 案例、測試入口、fixture、Assert |
-| `research.md`、`techstack.md` | 技術決策、工具及版本 |
-| `plan.md` | 系統邊界、端點盤點與設計決策 |
-| `ui-plan.md`、`prototype/` | 前端流程與測試入口 |
-| `data-model.dbml` | 資料責任與 schema |
-| `contracts/http-api.yaml` | 006 API 契約；004／005 契約依 plan 引用 |
+| 文件 | 位置 | 用途 |
+|---|---|---|
+| `spec.md` | PLAN_DIR | User Story、驗收、FR／NFR／BR／SC |
+| `truth-delta.md` | PLAN_DIR | 本 plan Truth 變更紀錄 |
+| `testplan.md` | PLAN_DIR | TP 案例、測試入口、fixture、Assert |
+| `research.md` | PLAN_DIR | 技術決策、工具及版本 |
+| `specs/truth/techstack.md` | TRUTH_ROOT | CI／整合測試命令 |
+| `plan.md` | PLAN_DIR | 端點盤點；`00N-openapi:` 錨點對應 Truth 內 operationId |
+| `ui/ui-plan.md`、`ui/prototype/` | PLAN_DIR | 前端流程與測試入口 |
+| `specs/truth/data/data-model.dbml` | TRUTH_ROOT | 資料責任與 schema |
+| `specs/truth/contracts/http-api.yaml` | TRUTH_ROOT | 合併 OpenAPI（006＋跨迭代 002–005 操作） |
 
 **任務規則**：每個行為任務只標一個 TDD 步驟。`[TDD:RED]` 只建立一個 TP 案例的測試；`[TDD:GREEN]` 只實作讓該紅燈轉綠的最小行為；`[TDD:REFACTOR]` 只整理已綠行為。未列 refactor 表示該切片不需重構。純文件／環境準備標 `[NON-TDD]` 並說明原因。每個 TP 案例至少被一個任務引用 `testplan:TP-xxx`。
 
@@ -22,14 +28,14 @@
 
 **Purpose**：確認研究決策與測試入口；此處僅為不改變產品行為的準備工作。
 
-**Read when executing this phase**：`research.md`、`techstack.md`、`plan.md`、`testplan.md`。
+**Read when executing this phase**：`truth-delta.md`（全文）、`research.md`、`specs/truth/techstack.md`、`plan.md`、`testplan.md`。
 
 **必讀對照**
 
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
 | `testplan.md` | 執行命令及環境 | `testplan:TP-015` | 預設 CI／測試入口 |
-| `techstack.md` | backend/frontend test commands | `techstack:整合測試` | 工作目錄與 runtime |
+| `specs/truth/techstack.md` | backend/frontend test commands | `techstack:整合測試` | 工作目錄與 runtime |
 
 - [ ] T001 [NON-TDD] 確認 Node.js、測試命令、memory DB harness 與環境設定符合 testplan；記錄差異，不修改產品行為 ← `testplan:TP-015`; `techstack:整合測試`; `plan:端點盤點`
 
@@ -66,7 +72,7 @@
 |---|---|---|---|
 | `testplan.md` | US1 TP-001–TP-003 | `testplan:TP-001`; `testplan:TP-002`; `testplan:TP-003` | 建立、輸入驗證、分類限制 |
 | `spec.md` | US1、FR-001–FR-003 | `spec:US1`; `spec:FR-001`; `spec:FR-002`; `spec:FR-003` | 菜單規則 |
-| `contracts/http-api.yaml` | Merchant category/menu operations | `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:deleteMerchantCategory` | API response 與錯誤契約 |
+| `specs/truth/contracts/http-api.yaml` | Merchant category/menu operations | `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:deleteMerchantCategory` | API response 與錯誤契約 |
 
 - [ ] T003 [US1] [TDD:RED] 為 TP-001 建立分類／餐點寫入與公開菜單可讀的測試 ← `testplan:TP-001`; `spec:US1`; `openapi:createMerchantCategory`; `openapi:createMerchantMenuItem`; `openapi:listMenuItems`
   完成條件：測試因分類與餐點尚未建立、公開菜單缺少對應欄位而失敗
@@ -93,7 +99,7 @@
 |---|---|---|---|
 | `testplan.md` | US2 TP-004–TP-005 | `testplan:TP-004`; `testplan:TP-005` | 停供餐點／選項 |
 | `spec.md` | US2、FR-004–FR-006、FR-011 | `spec:US2`; `spec:FR-004`; `spec:FR-005`; `spec:FR-006`; `spec:FR-011` | 供應狀態權威 |
-| `contracts/http-api.yaml` | Availability operations | `openapi:patchMenuItemAvailability`; `openapi:patchMenuOptionAvailability` | PATCH 行為 |
+| `specs/truth/contracts/http-api.yaml` | Availability operations | `openapi:patchMenuItemAvailability`; `openapi:patchMenuOptionAvailability` | PATCH 行為 |
 
 - [ ] T010 [US2] [TDD:RED] 為 TP-004 建立餐點停供後 API／公開菜單反映狀態的測試 ← `testplan:TP-004`; `spec:US2`; `openapi:patchMenuItemAvailability`; `openapi:listMenuItems`
   完成條件：測試因停供狀態未被持久化、公開菜單仍顯示可供應而失敗
@@ -117,7 +123,7 @@
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
 | `testplan.md` | US3 cart 不可用項目呈現 | `testplan:TP-006` | UI 狀態與總額 |
-| `ui-plan.md` | 顧客售完標示 | `ui-plan:§顧客售完標示` | 項目呈現 |
+| `ui/ui-plan.md` | 顧客售完標示 | `ui-plan:§顧客售完標示` | 項目呈現 |
 
 - [ ] T014 [US3] [TDD:RED] 建立 TP-006 購物車停供項目呈現與金額測試 ← `testplan:TP-006`; `spec:FR-007`; `ui-plan:§顧客售完標示`
   完成條件：測試因購物車未呈現停供項目與正確總額而失敗
@@ -130,7 +136,7 @@
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
 | `testplan.md` | US3 建單拒絕與金額權威 | `testplan:TP-007`; `testplan:TP-008` | API outcome 與持久化 |
-| `contracts/http-api.yaml` | create order | `003-openapi:createOrder` | 供應驗證與計價 |
+| `specs/truth/contracts/http-api.yaml` | create order | `003-openapi:createOrder` | 供應驗證與計價 |
 
 - [ ] T016 [US3] [TDD:RED] 建立 TP-007 停供 cart 建單拒絕且保留 cart 的測試 ← `testplan:TP-007`; `spec:FR-008`; `003-openapi:createOrder`
   完成條件：測試因建單未驗證供應狀態、仍接受停供項目而失敗
@@ -150,7 +156,7 @@
 | 文件 | 必讀部位（人讀） | 機器錨點 | 本節任務須對齊 |
 |---|---|---|---|
 | `testplan.md` | US4 role matrix 與 credential errors | `testplan:TP-009`; `testplan:TP-010` | 角色及認證回應 |
-| `contracts/http-api.yaml` | merchant authorization errors | `openapi:components.responses.MerchantForbidden`; `openapi:components.responses.MerchantUnauthorized` | 錯誤契約 |
+| `specs/truth/contracts/http-api.yaml` | merchant authorization errors | `openapi:components.responses.MerchantForbidden`; `openapi:components.responses.MerchantUnauthorized` | 錯誤契約 |
 
 - [ ] T020 [US4] [TDD:RED] 建立 TP-009 角色允許／拒絕矩陣測試 ← `testplan:TP-009`; `spec:FR-009`; `spec:FR-010`; `spec:FR-014`; `openapi:components.responses.MerchantForbidden`
   完成條件：測試因角色授權矩陣尚未實作、未依角色正確回應 403／200 而失敗
@@ -210,6 +216,7 @@
 
 ## Format Validation
 
+- Phase 1 必讀 **`truth-delta.md` 全文**；`openapi:`／`dbml:` 解析至 **`specs/truth/`**。
 - 每個 User Story 依 testplan 分組；所有 testplan TP ID 至少出現在一項 task 的 `testplan:TP-xxx` 錨點中。
 - 每個行為任務恰有一個 `[TDD:RED]`、`[TDD:GREEN]` 或 `[TDD:REFACTOR]` 標籤；多步驟工作必須拆成多項任務。
 - 每個 `[TDD:RED]` 任務下方皆有「完成條件：…」一行，寫出依 TP 案例 Assert 推導的預期紅燈原因。
@@ -217,5 +224,7 @@
 - `####` 小節須有必讀對照表，且每列至少由一個任務的 `←` 錨點引用；各 T 任務至少引用一個機器錨點。
 - 後端 HTTP 任務引用 `openapi:`；持久化任務引用 `dbml:`；前端任務引用 `ui-plan:`／`prototype:`；spec 追溯使用 `spec:`。
 - RED task 對應 testplan 案例的測試入口；GREEN／REFACTOR task 引用同一 TP 案例，不得改寫案例意圖。
+
+> 完整定稿（TP-001–TP-028、`[x]` 回溯）：`specs/plans/006-advanced-features-system-verification/tasks.md`
 
 Constitution self-check: pass

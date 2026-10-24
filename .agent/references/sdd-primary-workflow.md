@@ -1,52 +1,59 @@
 # SDD 主流程（Primary Workflow）
 
-版本：1.1
+版本：1.2  
 範圍：功能從構想到實作的 **預設** slash command 順序。  
-權威：流程步驟與 SOP 以 `.agent/skills/<skill-id>/SKILL.md` 為準；產物 MUST 以 `.agent/constitution/` 為準（見 `artifact-authority.md`）。
+權威：流程步驟與 SOP 以 `.agent/skills/<skill-id>/SKILL.md` 為準；Plan/Truth 契約見 `plan-truth-workflow.md`；產物 MUST 以 `.agent/constitution/` 為準（見 `artifact-authority.md`）。
 
 ## 主線
 
 ```text
-/specify → /technical-research → /system-analysis → /testplan → /tasks → /analyze → /implement
+/specify → /spec-by-example → /technical-research → /system-analysis → /dsl-refine → /tasks → /analyze → /implement
 ```
 
-| 步驟 | Skill | 主要產物 | 說明 |
-| --- | --- | --- | --- |
-| 1 | `/specify` | `specs/<feature>/spec.md` | 可追溯功能規格 |
-| 2 | `/technical-research` | `research.md`, `techstack.md` | 技術決策與堆疊摘要 |
-| 3 | `/system-analysis` | `plan.md` + 端點分析產物 | Wave 委派 ui/data/api plan |
-| 4 | `/testplan` | `testplan.md` | 依 User Story 規劃 FR／NFR 案例；測試入口依 system-analysis |
-| 5 | `/tasks` | `tasks.md` | 依 TP 案例拆解單步 TDD 任務與 `←` 錨點 |
-| 6 | `/analyze` | （無檔案；對話報告） | spec／plan／testplan／tasks 唯讀健檢 |
-| 7 | `/implement` | 程式碼 + `tasks.md` `[x]` | 依 tasks 實作；TDD 標籤派送 `/tdd` |
+| 步驟 | Skill | Plan 產物 | Truth 產物 | 說明 |
+| --- | --- | --- | --- | --- |
+| 1 | `/specify` | `specs/plans/<id>/spec.md`、`plan.meta.yaml`、`truth-delta.md`（骨架） | — | **MUST** 新建 plan 包（除非使用者明示延續既有 `PLAN_DIR`） |
+| 2 | `/spec-by-example` | `features/acceptance/*.feature` | — | 整體驗收 Journey；`/clarify` 收斂標籤 |
+| 3 | `/technical-research` | `research.md` | `truth/techstack.md` + DELEGATE `/truth-delta` | Truth owner |
+| 4 | `/system-analysis` | `plan.md` | — | Wave 委派；`ui/**`→ plan，`api/data`→ truth |
+| 4a | `/ui-plan` | `ui/ui-plan.md`、`ui/prototype/` | — | 非 Truth owner |
+| 4b | `/data-plan` | — | `truth/data/data-model.dbml` + DELEGATE `/truth-delta` | Truth owner |
+| 4c | `/api-plan` | — | `truth/contracts/http-api.yaml` + DELEGATE `/truth-delta` | Truth owner |
+| 5 | `/dsl-refine` | `traceability.md` | `truth/features/**` + DELEGATE `/truth-delta` | Truth owner |
+| 6 | `/tasks` | `tasks.md` | — | 必讀 `truth-delta.md`；MOD/DEL → Phase 2.5 Harness |
+| 7 | `/analyze` | — | — | 唯讀；含 truth-delta vs truth 一致性 |
+| 8 | `/implement` | `tasks.md` `[x]` | — | delta MOD/DEL → baseline＋交付前全 suite；詢問 commit |
 
 `/analyze` 與 `/implement` **不在**憲法 Artifacts registry 內：`analyze` 不寫入產物；`implement` 消費產物並改程式。
+
+## Plan / Truth 目錄
+
+- **PLAN_DIR**：`specs/plans/<NNN-short-name>/`（**FEATURE_DIR** 為同義舊名）
+- **TRUTH_ROOT**：`specs/truth/`
+- **Truth 變更紀錄**：`PLAN_DIR/truth-delta.md`（各 Truth owner 一表；**僅** `/truth-delta` 追加列；見 `plan-truth-workflow.md`）
 
 ## 選用分支（不取代主線順序）
 
 | 時機 | 指令 | 備註 |
 | --- | --- | --- |
-| 寫 spec 前／中，高影響未知 | `/clarify` | 由 `/specify` 等 skill **DELEGATE**，非主線獨立步驟 |
-| spec 交付後，使用者要求第二 pass | `/clarify-over-specs` | 預設 `/technical-research` 之前可選 |
-| `/system-analysis` Wave 內 | `/ui-plan`, `/data-plan`, `/api-plan` | 由 plan 委派，產物寫入 feature 目錄 |
-| `/implement` 執行 TDD 任務 | `/tdd` | 每個標記任務以單一 RED／GREEN／REFACTOR step 呼叫，不自動擴成完整循環 |
-| analyze 發現 CRITICAL | `/specify`, `/system-analysis`, `/testplan`, `/tasks`, … | 修復後 **重新** `/analyze`，再 `/implement` |
-| 產物約束變更 | `/constitution` | 不修改主線定義 |
+| 寫 spec 前／中，高影響未知 | `/clarify` | 由 producer skill **DELEGATE** |
+| Truth **DEL** 或破壞性 **MOD** | `/clarify` | Truth owner Phase 1 閘門 |
+| spec 交付後，使用者要求第二 pass | `/clarify-over-specs` | 可在 `/spec-by-example` 前 |
+| `/implement` 執行 BDD 任務 | `/bdd` | 單一 red/green/refactor |
+| Legacy TDD | `/testplan`、`/tdd` | 非新主線預設 |
+| analyze 發現 CRITICAL | 對應 producer skill | 再 `/analyze` → `/implement` |
+| 使用者同意交付 commit | `/git-conventional-commit` | 由 `/implement` 收尾 **DELEGATE** |
 
 ## `/analyze` 閘門（實作前）
 
-- **前置**：同目錄存在 `spec.md`、`plan.md`、`testplan.md`、`tasks.md`。
-- **行為**：唯讀交叉分析（重複、歧義、覆蓋缺口、憲法對齊、錨點一致性等）；詳見 `.agent/skills/analyze/SKILL.md`。
-- **出口**：
-  - 有 **CRITICAL** → 先修復產物，勿 `/implement`。
-  - 僅 LOW/MEDIUM → 可 caution 下 `/implement`。
-  - 零 issue → 預設 `/implement`。
-- **修復**：analyze **不得**改檔；須使用者同意後 invoke 對應 producer skill 或手動編輯。
+- **前置**：`PLAN_DIR` 存在 `spec.md`、`plan.md`、`tasks.md`、`truth-delta.md`；BDD 模式須 traceability + Truth 介面 Feature；legacy 須 `testplan.md`。
+- **行為**：唯讀交叉分析（含 **truth-delta 與 TRUTH_ROOT 是否一致**、錨點是否因 DEL 失效）。
+- **出口**：CRITICAL → 勿 `/implement`；否則可 proceed。
 
 ## `/implement` 與 analyze
 
-主流程預期在 **同一 feature、同一輪 tasks 定稿後** 已執行 `/analyze`。若使用者直接 `/implement` 且未明示跳過健檢，Implement skill 應提示先 `/analyze` 或確認仍 proceed（見 `skills/implement/SKILL.md` Phase 1）。
+主流程預期 **同一 PLAN_DIR、同一輪 tasks 定稿後** 已 `/analyze`。Completion 後詢問是否 git commit（Q6:A）。
 
-## Feature 目錄慣例
+## Feature 目錄慣例（更新）
 
-預設：`specs/<NNN-short-name>/`（與 `/specify` 一致）。各步驟以 **FEATURE_DIR** 為工作根目錄；analyze/implement 可由 `tasks.md` 路徑推斷父目錄。
+預設 plan 包：`specs/plans/<NNN-short-name>/`。Acceptance Feature：`PLAN_DIR/features/acceptance/`。介面 Feature／DSL：`TRUTH_ROOT/features/`。各步驟以 **PLAN_DIR** 為工作根；Truth 以 **TRUTH_ROOT** 為準。

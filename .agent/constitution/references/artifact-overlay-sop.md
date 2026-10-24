@@ -48,4 +48,4 @@
 | testplan | testplan.md | `.agent/constitution/skills/testplan/testplan.md` |
 | tasks | tasks.md | `.agent/constitution/skills/tasks/tasks.md` |
 
-`/implement` 不在 registry 內。
+`/implement` 不產出 artifact，不在上表；執行契約 overlay 見 `.agent/constitution/skills/implement/implement.md`（Implement 開始前 READ）。

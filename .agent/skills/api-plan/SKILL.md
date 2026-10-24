@@ -14,7 +14,8 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 1 -- 確認輸入與前置產物
 
-1. READ 讀取功能規格、`plan.md`、研究文件、委派指令，以及 plan 要求的前置分析產物（通常含 `ui-plan.md` 與 `data-model.dbml`）；缺任一必要前置時停止並回報，不得臆測補寫。
+1. READ `../../references/plan-truth-workflow.md`、`../../references/Rule-Truth-Owner-Inventory-and-Delta.md`；`TRUTH_ROOT/contracts/http-api.yaml` 為預設輸出；`PLAN_DIR/ui/ui-plan.md`、`TRUTH_ROOT/data/data-model.dbml` 為常見前置。
+2. READ 讀取功能規格、`plan.md`、研究文件、委派指令，以及 plan 要求的前置分析產物；缺任一必要前置時停止並回報，不得臆測補寫。
 2. READ 讀取 `rules/Rule-API-分析邊界與追溯.md`。
 3. THINK 對照 ui-plan 流程與 data 契約，列出 API 須支撐的操作與整合邊界（認證、CORS/Origin、錯誤格式等）。
 4. THINK 高影響缺口（幂等、分頁、上傳協定、錯誤碼策略）無法對齊規格或前置產物時，透過 `/clarify` 收斂。
@@ -28,15 +29,17 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 
 ### Phase 3 -- 產出 API 文件
 
-1. THINK 依專案慣例或委派指令決定輸出路徑；預設為與 `plan.md` 同目錄下 `contracts/http-api.yaml`（OpenAPI 3.0.3；目錄不存在則建立）。
-2. READ 讀取 `templates/http-api.template.yaml` 與 `templates/http-api.example.yaml`，確認結構、追溯欄位（`info`、`x-contract-metadata`、`x-errorCases`）與 schema 粒度。
-3. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`http-api.yaml`）。
-4. WRITE 依模板撰寫有效 OpenAPI 文件；補齊 `paths` 與 `components`，移除所有 `{{}}` 佔位符與空 schema；產物 MUST 以憲法為最高優先。
-5. WRITE 若檔案已存在，讀取並整合；與 data-model.dbml 衝突須釐清。
+1. EXEC **Truth owner Phase 0–1**（Inventory、Delta；DEL／破壞性 MOD 須 `/clarify`）。
+2. THINK 輸出路徑 MUST 為 **`TRUTH_ROOT/contracts/http-api.yaml`**（OpenAPI 3.0.3）；禁止寫入 `PLAN_DIR/contracts/`。
+3. READ 讀取 `templates/http-api.template.yaml` 與 `templates/http-api.example.yaml`，確認結構、追溯欄位（`info`、`x-contract-metadata`、`x-errorCases`）與 schema 粒度。
+4. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`http-api.yaml`）。
+5. WRITE 依模板撰寫有效 OpenAPI 文件；補齊 `paths` 與 `components`，移除所有 `{{}}` 佔位符與空 schema；產物 MUST 以憲法為最高優先。
+6. WRITE 若檔案已存在，讀取並整合；與 `TRUTH_ROOT/data/data-model.dbml` 衝突須釐清。
+7. EXEC Apply Truth 後 DELEGATE **`/truth-delta`**（`owner_skill_id: api-plan`，本輪完整 `entries[]`）。
 
 ### Phase 4 -- 驗證並交付
 
 1. READ 對照規格、前置 ui-plan／data 產物與 API 文件，確認每個受派後端操作皆有契約，且流程可端到端走通（概念上）。
 2. THINK 檢查錯誤與失敗路徑與 plan 設計決策一致（如逐檔上傳失敗、transaction 失敗時客戶端可見行為）。
 3. EXEC **Phase Self-check**（artifact=`http-api.yaml`）。
-4. WRITE 回報產物路徑、端點清單摘要、待確認事項、已知限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+4. WRITE 回報 `TRUTH_ROOT/contracts/http-api.yaml`、`truth-delta.md` §api-plan 新增列、端點清單摘要、待確認事項、已知限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。

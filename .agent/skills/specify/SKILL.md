@@ -22,9 +22,11 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 3. THINK 將可觀察的系統行為整理為 FR，將明確的品質限制整理為 NFR；故事專屬需求歸入該故事，適用於多個故事的需求只列於全域需求並記錄適用故事，兩者都以穩定且唯一的 ID 追溯。
 4. THINK 整理 **商業規則（BR）**：跨故事、跨畫面的領域不變量與政策（非 UI 細節）；每條使用 **BR-** 唯一 ID，可註明對應 FR/NFR；與 FR 重複時 FR 仍為驗收主體。
 5. THINK 整理邊界情況、主要實體、可衡量成功標準及假設；只填入來源支持或使用者確認的內容，未提供的門檻不得自行編造。
-6. THINK 依專案既有慣例決定輸出位置；若沒有慣例且使用者未指定，使用 `specs/<feature-branch>/spec.md`，其中 `<feature-branch>` 採 `NNN-short-name` 格式。
-7. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`spec.md`）。
-8. WRITE 依 `templates/spec.template.md` 產生完整規格（含 **商業規則** 章節），保留必要章節與需求追溯；移除未使用的可選區塊及所有未替換佔位符；產物 MUST 以憲法為最高優先（見 artifact-authority.md）。
+6. READ `../../references/plan-truth-workflow.md`；確認 **PLAN_DIR** 與 **TRUTH_ROOT** 契約。
+7. THINK **配置 plan 包（Q1:A）**：除非使用者明示「延續既有 plan」並提供有效 `PLAN_DIR`，MUST 新建 `specs/plans/<NNN>-<slug>/`；`NNN` = 既有三位數 plan id 最大值 + 1（無則 `001`）；`<slug>` 由需求短名 kebab-case。禁止在未明示延續時寫入既有 plan 目錄。
+8. WRITE 於 `PLAN_DIR` 建立 `plan.meta.yaml`（依 `templates/plan.meta.template.yaml`）、`truth-delta.md`（依 `../truth-delta/templates/truth-delta.template.md`，將 `{{PLAN_DIR}}` 替換為實際路徑；**僅空骨架**，不得 append 表格列）；**不得**寫入 `specs/truth/`。
+9. READ `../../constitution/CONSTITUTION.md`、`../../constitution/references/artifact-authority.md`、`../../constitution/references/artifact-overlay-sop.md`；EXEC **Phase Load**（artifact=`spec.md`）。
+10. WRITE 依 `templates/spec.template.md` 於 `PLAN_DIR/spec.md` 產生完整規格（含 **商業規則** 章節），保留必要章節與需求追溯；移除未使用的可選區塊及所有未替換佔位符；產物 MUST 以憲法為最高優先（見 artifact-authority.md）。
 
 ## Phase 3 -- 驗證規格並交付
 
@@ -32,5 +34,5 @@ attribution: "SDD workflow informed by github/spec-kit (MIT, Copyright GitHub, I
 2. THINK 對照原始需求與澄清回答，確認每個明確需求都有 User Story 或全域需求歸屬，驗收情境能驗證預期行為，且沒有未經支持的需求、數值或承諾；腳本通過不能取代此語意檢查。
 3. EXEC **Phase Self-check**（artifact=`spec.md`）；未全過則修正後重驗。
 4. WRITE 修正檢查發現的錯誤與遺漏，重新執行驗證，直到結構檢查通過且語意檢查完成。
-5. WRITE 回報規格路徑、主要故事與全域需求、尚待確認的假設或限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
-6. WRITE 建議下一指令：預設 **`/technical-research`**（主流程見 `../../references/sdd-primary-workflow.md`）；若使用者要求 spec 第二 pass 澄清，可選 **`/clarify-over-specs`**。
+5. WRITE 回報 **PLAN_DIR**、`spec.md` 路徑、主要故事與全域需求、尚待確認的假設或限制，以及 `Constitution self-check: pass` 或 `exceptions`（格式見 artifact-overlay-sop）。
+6. WRITE 建議下一指令：預設 **`/spec-by-example`**（主流程見 `../../references/sdd-primary-workflow.md`）；若使用者跳過 acceptance 可 **`/technical-research`**；第二 pass 澄清可選 **`/clarify-over-specs`**。

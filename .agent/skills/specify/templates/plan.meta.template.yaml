@@ -1,0 +1,8 @@
+plan_id: "{{NNN}}-{{slug}}"
+numeric_id: {{NNN_INT}}
+slug: "{{slug}}"
+status: draft
+truth_root: specs/truth
+plans_root: specs/plans
+created_from: specify
+spec_path: spec.md

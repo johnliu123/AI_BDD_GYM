@@ -6,9 +6,10 @@
 - **B 歧義（Ambiguity）**：無量測的模糊形容詞（快速、直覺、安全、可擴展等）且無 NFR／SC；TODO、TKTK、`???`、未替換佔位符。
 - **C 欠規格（Underspecification）**：有動詞無對象或驗收；User Story 缺 GWT 或與 FR 脫節；tasks 描述缺檔案路徑或不可執行。
 - **D 憲法對齊（Constitution）**：違反憲法 MUST 或 artifact registry 加嚴；缺 mandated 章節／欄位（可交叉 `validate_spec.py`）。
-- **E 覆蓋缺口（Coverage）**：FR／NFR／BR（baseline 功能）無任務映射；需建置的 SC 無任務；tasks 中 Tnnn 無法對應任何需求或故事。
+- **E 覆蓋缺口（Coverage）**：FR／NFR／BR（baseline 功能）無任務映射；需建置的 SC 無任務；BDD 模式中範圍內可驗收的 spec ID 未列入 acceptance traceability、未連到 interface Example（或 Scenario），或 Example 缺 RED／GREEN 任務；缺 Feature File Phase 或 NFR 重構 Phase；legacy TDD 模式中 TP 無任務映射；tasks 中 Tnnn 無法對應任何需求或故事。
 - **F 不一致（Inconsistency）**：術語漂移；plan 實體／端點與 spec 矛盾；tasks Phase 順序與 plan Wave 或依賴矛盾；技術堆疊衝突（如 plan 與 techstack 版本矛盾）。
-- **G 錨點與 Binding（Tasks binding）**：必讀對照列無任務引用；任務 `←` 指向不存在檔案或明顯錯誤錨點；openapi／dbml 錨點與契約檔不一致（按需 READ 驗證）。
+- **G 錨點與 Binding（Tasks binding）**：必讀對照列無任務引用；BDD `acceptance:`／`feature:`／`dsl:` 錨點不唯一、不存在或互不匹配；legacy `testplan:` 錨點找不到 TP；任務 `←` 指向不存在檔案或明顯錯誤錨點；openapi／dbml 錨點與契約檔不一致（按需 READ 驗證）。
+- **H Harness 與 truth-delta**：`truth-delta.md` 含 MOD/DEL 但 `tasks.md` 缺 **Phase 2.5** 或 MOD/DEL 列無對應任務；DEL 後 tasks 仍引用已刪 Example／DSL；測試程式仍引用 delta 已刪路徑或標題（按需搜尋 codebase）；BDD GREEN 任務僅描述過渡 harness 而無 Truth Then 對齊說明。
 
 ## Good Example
 
@@ -29,7 +30,7 @@ spec 有 12 條 FR，tasks 有 40 條，應該夠了。
 # Rule 2 - 嚴重度 heuristics
 
 - Level: `MUST`
-- **CRITICAL**：違反憲法 MUST；缺 spec／plan／tasks 任一必備檔；baseline 核心 FR／BR 零覆蓋且阻擋 MVP；spec 結構驗證失敗且影響追溯。
+- **CRITICAL**：違反憲法 MUST；缺 spec／plan／tasks 任一必備檔；baseline 核心 FR／BR 零覆蓋且阻擋 MVP；spec 結構驗證失敗且影響追溯；truth-delta 有 MOD/DEL 但缺 Phase 2.5。
 - **HIGH**：互相衝突的需求或 plan 決策；安全／效能相關歧義；不可測驗收；duplicate 正式需求 ID；必讀對照雙向覆蓋明顯失敗。
 - **MEDIUM**：術語漂移；非核心 SC 缺任務；邊界情況欠規格；research／techstack 缺檔但 tasks 已引用（前置閘門問題）。
 - **LOW**：用字冗餘、輕微重複不影響執行順序、風格建議。

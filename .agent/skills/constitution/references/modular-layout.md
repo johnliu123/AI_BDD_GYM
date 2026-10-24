@@ -20,7 +20,7 @@
 | ui-plan | ui-plan.md, prototype/ |
 | data-plan | data-model.dbml |
 | api-plan | http-api.yaml |
-| testplan | testplan.md |
+| testplan | testplan.md（legacy workflow） |
 | tasks | tasks.md |
 
 Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（見 overlay-sop）。
@@ -29,10 +29,11 @@ Producer skill 在 WRITE 前 **Phase Load**、交付前 **Phase Self-check**（�
 
 預設順序見 `../../references/sdd-primary-workflow.md`：
 
-`/specify` → `/technical-research` → `/system-analysis` → `/testplan` → `/tasks` → **`/analyze`** → `/implement`
+`/specify` → `/spec-by-example` → `/technical-research` → `/system-analysis` → `/dsl-refine` → `/tasks` → **`/analyze`** → `/implement`
 
 | 步驟 | 寫入憲法產物 | 備註 |
 | --- | --- | --- |
 | `/analyze` | 否 | 唯讀健檢；報告僅對話輸出 |
-| `/testplan` | `testplan.md` | 憲法 registry 產物 |
-| `/implement` | 否（改程式與 tasks 勾選） | 不在 registry 內；依 TDD 標籤委派 `/tdd` |
+| `/dsl-refine` | interface Feature／DSL、acceptance traceability | BDD 任務的測試來源 |
+| `/testplan` | `testplan.md` | legacy TDD workflow 的憲法 registry 產物 |
+| `/implement` | 否（改程式與 tasks 勾選） | 不在 registry 內；BDD 標籤委派 `/bdd`，legacy TDD 標籤委派 `/tdd` |
