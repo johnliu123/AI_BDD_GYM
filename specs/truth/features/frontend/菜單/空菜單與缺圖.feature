@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客瀏覽餐點與分類總驗收旅程.feature / Rule: 缺少餐點資料時仍須明確呈現 / Example: 餐點缺少部分資訊時仍保留在菜單
 Feature: 菜單缺資料時的呈現
 
+
+  本 Feature 驗證：菜單缺資料時的呈現 — 餐點缺少圖片時仍保留餐點卡並明確提示；缺少價格時仍顯示餐點與明確提示；缺少分類時仍顯示餐點與明確提示 等。
   Rule: 餐點缺少圖片時仍保留餐點卡並明確提示
 
     Example: 顧客瀏覽沒有圖片的餐點

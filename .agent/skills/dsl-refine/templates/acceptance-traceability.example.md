@@ -5,7 +5,21 @@
 - Acceptance Feature root: `features/acceptance/`
 - System analysis: `plan.md`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+### 後端 / 折扣
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客套用折扣碼完成下單 | 未達門檻時拒絕套用且訂單權威狀態不變 | AC: 顧客套用折扣碼完成下單 |
+
+### 前端 / 結帳
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客套用折扣碼完成下單 | 畫面顯示正確折抵結果與金額摘要 | AC: 顧客套用折扣碼完成下單 |
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

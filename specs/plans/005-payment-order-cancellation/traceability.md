@@ -7,7 +7,67 @@
 - System analysis: `plan.md`
 - Spec requirements: `spec.md`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+> 覆蓋完整性以下方 Coverage Matrix 與機械稽核為準；人 Review 本節即可。
+
+### frontend / 顧客訂單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客完成付款並查看付款狀態 | 成功付款使用訂單快照並保留出餐狀態 | AC: 顧客完成付款並查看付款狀態 |
+| 顧客端提交不同金額不會改變應付金額 | client amount 不會覆寫應付金額或快照 | AC: 顧客端提交不同金額不會改變應付金額 |
+| 已付款或付款處理中的訂單不會重複扣款 | paid 或 non-stale pending 不啟動第二次付款 | AC: 已付款或付款處理中的訂單不會重複扣款 |
+| 付款失敗後以同一訂單再次付款成功 | failed 可重試並轉 paid，快照不變 | AC: 付款失敗後以同一訂單再次付款成功 |
+| 顧客重送已成功的同一付款請求 | 同 key 重送回原成功結果，不重複扣款 | AC: 顧客重送已成功的同一付款請求 |
+| 顧客取消尚未接單且未付款的訂單 | created/unpaid 可取消，保留訂單快照並阻擋後續操作 | AC: 顧客取消尚未接單且未付款的訂單 |
+| 顧客取消已付款但尚未接單的訂單 | paid cancel 同步 refunded 並保留快照 | AC: 顧客取消已付款但尚未接單的訂單 |
+| 顧客無法取消已進入出餐流程的訂單 | 非 created 訂單取消遭拒且雙狀態不變 | AC: 顧客無法取消已進入出餐流程的訂單 |
+| 付款仍有效處理中時不得取消，過期處理才可安全取消 | non-stale pending cancel 拒絕；stale pending 同交易 failed+cancelled | AC: 付款仍有效處理中時不得取消，過期處理才可安全取消 |
+| 顧客查詢付款失敗訂單 | 查詢回傳付款失敗標籤、出餐狀態與建立時快照 | AC: 顧客查詢付款失敗訂單 |
+| 顧客查詢已取消訂單 | cancelled 與付款標籤及建立快照仍可查詢 | AC: 顧客查詢已取消訂單 |
+
+### backend / 訂單
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客完成付款並查看付款狀態 | 後端保存 paid 並以 total_amount 快照付款 | AC: 顧客完成付款並查看付款狀態 |
+| 顧客端提交不同金額不會改變應付金額 | pay result 依 orders.total_amount，不採信 request amount | AC: 顧客端提交不同金額不會改變應付金額 |
+| 已付款或付款處理中的訂單不會重複扣款 | 後端不建立第二個 payment attempt | AC: 已付款或付款處理中的訂單不會重複扣款 |
+| 付款失敗後以同一訂單再次付款成功 | failed 訂單重試成功，保留前次失敗摘要 | AC: 付款失敗後以同一訂單再次付款成功 |
+| 顧客重送已成功的同一付款請求 | 只有 paid 成功寫入冪等 mapping，重送不二次執行 | AC: 顧客重送已成功的同一付款請求 |
+| 顧客取消尚未接單且未付款的訂單 | backend 交易取消 order 且後續 pay/merchant action 拒絕 | AC: 顧客取消尚未接單且未付款的訂單 |
+| 顧客取消已付款但尚未接單的訂單 | backend 同一交易 cancelled+refunded 並記 refunded_at | AC: 顧客取消已付款但尚未接單的訂單 |
+| 顧客無法取消已進入出餐流程的訂單 | backend 依持久化出餐狀態拒絕並保留付款狀態 | AC: 顧客無法取消已進入出餐流程的訂單 |
+| 付款仍有效處理中時不得取消，過期處理才可安全取消 | stale pending 中止、non-stale pending 不變，避免 pending+cancelled | AC: 付款仍有效處理中時不得取消，過期處理才可安全取消 |
+| 顧客查詢付款失敗訂單 | API 回傳 failed、標籤及快照 | AC: 顧客查詢付款失敗訂單 |
+| 顧客查詢已取消訂單 | API 回傳 cancelled/refunded 狀態與建立快照 | AC: 顧客查詢已取消訂單 |
+
+### frontend / 店家訂單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 店家依付款狀態篩選訂單 | 店家列表依付款狀態篩選並顯示雙狀態及快照 | AC: 店家依付款狀態篩選訂單 |
+| 無效店家憑證無法讀取付款資訊 | 無效憑證拒絕且不揭露訂單內容 | AC: 無效店家憑證無法讀取付款資訊 |
+| 店家不能接單已取消訂單 | cancelled 訂單拒絕接單且狀態不變 | AC: 店家不能接單已取消訂單 |
+| 店家不能推進已取消訂單 | cancelled 訂單拒絕出餐狀態推進 | AC: 店家不能推進已取消訂單 |
+| 店家查看付款失敗訂單詳情 | 詳情含付款狀態、失敗摘要及建立快照 | AC: 店家查看付款失敗訂單詳情 |
+| 無效店家憑證無法讀取訂單詳情 | 無效憑證拒絕詳情讀取且不洩漏資料 | AC: 無效店家憑證無法讀取訂單詳情 |
+| 店家不能完成已取消訂單 | cancelled 訂單拒絕 complete action 且雙狀態不變 | AC: 店家不能完成已取消訂單 |
+
+### backend / 店家訂單
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 店家依付款狀態篩選訂單 | API 列表與詳情含付款狀態並依 payment_status 篩選 | AC: 店家依付款狀態篩選訂單 |
+| 無效店家憑證無法讀取付款資訊 | API 拒絕未授權讀取且不回傳訂單 | AC: 無效店家憑證無法讀取付款資訊 |
+| 店家不能接單已取消訂單 | cancelled 訂單拒絕 accept operation | AC: 店家不能接單已取消訂單 |
+| 店家不能推進已取消訂單 | cancelled 訂單拒絕 start/complete operation | AC: 店家不能推進已取消訂單 |
+| 店家查看付款失敗訂單詳情 | API 詳情含付款狀態與失敗摘要，快照不變 | AC: 店家查看付款失敗訂單詳情 |
+| 無效店家憑證無法讀取訂單詳情 | API 拒絕無效憑證讀取單筆詳情 | AC: 無效店家憑證無法讀取訂單詳情 |
+| 店家不能完成已取消訂單 | cancelled 訂單拒絕 complete operation 且雙狀態不變 | AC: 店家不能完成已取消訂單 |
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

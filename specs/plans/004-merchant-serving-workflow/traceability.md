@@ -7,7 +7,36 @@
 - System analysis: `plan.md`
 - Spec requirements: `spec.md`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+> 覆蓋完整性以下方 Coverage Matrix 與機械稽核為準；人 Review 本節即可。
+
+### frontend / 店家訂單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 店家查看待處理訂單及其明細 | 店家列表及詳情使用建立時快照 | AC: 店家查看待處理訂單及其明細 |
+| 未獲授權的人員無法查看訂單 | 未授權請求不讀取或洩漏訂單資料 | AC: 未獲授權的人員無法查看訂單 |
+| 店家接單、開始出餐並完成訂單 | 三個前進 transition 逐步保存且快照不變 | AC: 店家接單、開始出餐並完成訂單 |
+| 店家無法跳過流程或倒退已完成訂單 | 非法或倒退轉換拒絕且狀態不變 | AC: 店家無法跳過流程或倒退已完成訂單 |
+
+### backend / 訂單
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 店家查看待處理訂單及其明細 | API 回傳正確摘要欄位與完整快照 | AC: 店家查看待處理訂單及其明細 |
+| 未獲授權的人員無法查看訂單 | 店家憑證錯誤時拒絕讀取 | AC: 未獲授權的人員無法查看訂單 |
+| 店家接單、開始出餐並完成訂單 | 狀態更新依 expected state 條件寫入且不改快照 | AC: 店家接單、開始出餐並完成訂單 |
+| 店家無法跳過流程或倒退已完成訂單 | 非法 transition 不寫入且不改快照 | AC: 店家無法跳過流程或倒退已完成訂單 |
+| 店家接單、開始出餐並完成訂單 | 顧客與店家讀取同一權威 status | AC: 店家接單、開始出餐並完成訂單 |
+
+### frontend / 顧客訂單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 店家接單、開始出餐並完成訂單 | 顧客 query 反映店家寫入同一持久化狀態 | AC: 店家接單、開始出餐並完成訂單 |
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

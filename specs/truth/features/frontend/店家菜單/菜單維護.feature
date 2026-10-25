@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家可以維護分類、餐點與規格 / Example: 店家建立分類與餐點後顧客可在菜單中看到
 Feature: 店家維護菜單資料
 
+
+  本 Feature 驗證：店家維護菜單資料 — 店家建立的菜單資料會呈現在顧客菜單；店家可維護餐點規格群組與選項。
   Rule: 店家建立的菜單資料會呈現在顧客菜單
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家可以維護分類、餐點與規格 / Example: 店家建立分類與餐點後顧客可在菜單中看到

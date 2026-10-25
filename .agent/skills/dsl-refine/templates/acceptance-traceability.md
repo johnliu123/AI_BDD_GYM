@@ -5,7 +5,19 @@
 - Acceptance Feature root: `{{acceptance_features_root}}`
 - System analysis: `{{system_analysis_plan_path}}`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+> 確認每個驗收情境在各介面「測的是什麼」；覆蓋完整性由下方 Coverage Matrix 與 Phase 4 機械稽核保證。
+
+### {{interface_name}} / {{module_or_scope}}
+
+| 驗收情境 | {{interface_short_name}}驗什麼 | 來源 |
+| --- | --- | --- |
+| {{acceptance_scenario_title}} | {{what_this_interface_verifies}} | AC: {{acceptance_example_title}} |
+
+<!-- 依介面／模組重複小節 -->
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

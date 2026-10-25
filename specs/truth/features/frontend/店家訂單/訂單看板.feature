@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家處理訂單與出餐.feature / Rule: 店家可以檢視訂單佇列與訂單快照 / Example: 店家查看待處理訂單及其明細
 Feature: 店家檢視及處理訂單看板
 
+
+  本 Feature 驗證：店家檢視及處理訂單看板 — 店家可依狀態檢視訂單與建立時快照；店家只能按流程推進訂單狀態。
   Rule: 店家可依狀態檢視訂單與建立時快照
 
     Example: 店家查看待處理訂單列表

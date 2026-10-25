@@ -13,7 +13,7 @@ disable-model-invocation: true
 
 ## Quick Start
 
-1. 先讀目標 acceptance／interface Feature、同模組 `dsl.md`、相關介面根共用 `dsl.md`、spec 與 system-analysis traceability；只有明確處理 legacy TDD 套件時才讀 testplan。
+1. 先讀目標 acceptance／interface Feature、同模組 `dsl.md`、相關介面根共用 `dsl.md`、spec 與 traceability；legacy TDD 才按需讀 testplan。
 2. 先判斷本輪是「建立」、「檢查」還是「重構」。
 3. 結構與詞彙一起改，**不要只改 Gherkin 不改 DSL**。
 4. 任一 Gherkin 句型若找不到 DSL 對應，先補 DSL，再回填 feature。
@@ -21,43 +21,42 @@ disable-model-invocation: true
 
 ## SOP
 
-## Phase 1 -- 收斂輸入與輸出範圍
+## Phase 1 -- 收斂輸入、標準與輸出範圍
 
-1. READ 讀取使用者需求、目標 acceptance／interface Feature、同模組 `dsl.md`、與目標句型相關的介面根共用 `dsl.md`、spec、plan 與 acceptance traceability，確認本輪介面與處理範圍；legacy TDD 套件才按需讀取 testplan。
-2. THINK 判斷本輪是新建、覆蓋驗證、句型收斂、結構重組或嚴格度補強，並盤點要修改的 feature 與 DSL 檔案。
-3. WRITE 回報修改範圍與會影響切檔或句型邊界的高影響歧義；若有歧義，先停下確認。
+1. READ 讀取使用者需求、目標 acceptance／interface Feature、同模組 `dsl.md`、相關介面根共用 `dsl.md`、spec、plan、`PLAN_DIR/traceability.md`（若存在）；legacy TDD 才按需讀 testplan。
+2. READ 一次載入 [STANDARDS.md](STANDARDS.md) 全文。**後續 Phase 不再重複 READ STANDARDS**（§1 句型與 §1.1 Then 去重、§2 結構、§3 參數、§4 DSL 兩層、§5–§7 實作語意與覆蓋檢查，均依 Phase 1 已載入內容執行）。
+3. THINK 判斷本輪是新建、覆蓋驗證、句型收斂、結構重組或嚴格度補強，並盤點要修改的 feature 與 DSL 檔案。
+4. WRITE 回報修改範圍與會影響切檔或句型邊界的高影響歧義；若有歧義，先停下確認。
 
 ## Phase 2 -- 盤點測試案例與覆蓋缺口
 
-1. READ 讀取 [STANDARDS.md](STANDARDS.md) 中的「覆蓋與嚴格度標準」與「Gherkin 句型標準」。
-2. THINK 逐一比對每個上游 acceptance Example 與衍生 interface Scenario 的 Arrange / Act / 預期輸出 / 必須維持不變／本案例不驗證，判斷目前的 Gherkin 與 DSL 是否完整覆蓋；若只是有步驟但語意被稀釋，也算缺口。legacy TDD 套件可改以指定 testplan 案例作為比較來源。
-3. WRITE 列出缺口：缺少句型、句型過胖、DataTable / Background / Rule 邊界錯置、Then 嚴格度不足、或 Gherkin 有技術語句外露。
+1. THINK 逐一比對每個上游 acceptance Example 與衍生 interface Scenario 的 Arrange / Act / 預期輸出 / 必須維持不變／本案例不驗證，判斷 Gherkin 與 DSL 是否完整覆蓋；步驟在但語意被稀釋也算缺口。
+   - 判準提醒：Then 須驗證契約（呈現 + 權威狀態等），不能只停 response（STANDARDS §5.2、§7）。
+2. WRITE 列出缺口：缺少句型、句型過胖、DataTable / Background / Rule 邊界錯置、Then 嚴格度不足、或 Gherkin 暴露技術細節。
 
 ## Phase 3 -- 收斂 Gherkin 句型
 
-1. READ 讀取 [STANDARDS.md](STANDARDS.md) 中的「Gherkin 語言邊界與句型收斂」與「參數 / DataTable 格式」。
-2. THINK 收斂 `Given` / `When` / `Then` 的共用句型：語意相同必須共用；句子過胖就拆成更核心、可重用的步驟；只有多列資料或多欄位摘要時才優先用 DataTable。
-3. WRITE 修改 Gherkin：補 Given / When / Then、補業務相關預設值註解、調整 DataTable、移除不再需要的搬運期註解與技術細節。
+1. THINK 收斂 `Given` / `When` / `Then`：語意相同 MUST 共用；過胖句型拆成可重用步驟；DataTable 僅用於多列或多欄摘要（STANDARDS §1、§3）。
+2. WRITE 修改 Gherkin：補 Given / When / Then、業務預設值註解、調整 DataTable；移除技術細節與搬運期註解。
 
 ## Phase 4 -- 收斂 DSL 詞彙表
 
-1. READ 讀取 [STANDARDS.md](STANDARDS.md) 中的「DSL 必備欄位」、「後端實作語意」與「前端實作語意」。
-2. READ 若需要建立、移動 DSL row，或判斷句型應由模組或介面根承接，按需讀取 `rules/介面功能模組與DSL唯一歸屬判準.md`，確認完整契約與唯一歸屬判準。
-3. THINK 對每個 Gherkin 句型判斷既有 row、DataTable 欄位、預設參數與實作語意是否足夠，並依已載入判準決定唯一權威位置。
-4. WRITE 在唯一權威 DSL 檔建立或更新 row，確保句型、參數、DataTable 欄位、預設值與實作語意可直接支援 step definition。
+1. THINK 為每個 step 決定唯一 DSL 權威位置：模組 `{介面}/{模組}/dsl.md` 優先；跨模組且契約完全一致才上提 `{介面}/dsl.md`（STANDARDS §2.1）。
+   - 判準提醒：Then 去重依 §1.1；模組檔含 **業務 DSL（人 Review）** + **技術 DSL（測試落地參考）**（§4.0）。
+2. READ 僅在建立／移動 row 或升格／下放句型時，按需讀取 `../dsl-refine/rules/介面功能模組與DSL唯一歸屬判準.md` 的 Good/Bad 範例。
+3. WRITE 在唯一權威 DSL 更新 row；每個 Gherkin step 合併查找介面根 + 模組 DSL 後 MUST 恰好命中一個 row。
 
 ## Phase 5 -- 做結構優化
 
-1. READ 讀取 [STANDARDS.md](STANDARDS.md) 中的「Feature / Rule / Example」與「Background / Scenario Outline / DataTable 決策」。
-2. THINK 依功能面向切分 feature files，判斷是否要抽 `Rule`、`Background`、`Scenario Outline`；`Rule` 必須原子化，`Example` 應描述資料情境而不是重複規則句。
-3. WRITE 重構 feature files：拆檔、抽 Rule、抽 Background、必要時引入 Scenario Outline，並移除被淘汰的單一總表檔。
+1. THINK 依功能面向切 feature；`Rule` 原子化；`Example` 描述資料情境；Background / Scenario Outline 依 STANDARDS §2 決策。
+2. WRITE 重構 feature files：拆檔、抽 Rule、必要時 Scenario Outline；移除被淘汰的單一總表檔。
 
 ## Phase 6 -- 檢查可落地性
 
-1. READ 重新讀取修改後的 feature files、同模組 DSL 與相關介面根共用 DSL。
-2. DELEGATE 執行 `uv run .agents/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root <features-root>`，機械檢查拓樸、DSL row 重複與每個 step 的唯一匹配，並保留輸出供後續判讀。
-3. THINK 結合稽核結果與已載入標準，判斷共用契約是否真的語意一致、每個 test case 是否完整覆蓋、Gherkin 是否維持業務語言、DSL 是否足以直接實作，以及 Then 是否超越表面輸出。
-4. WRITE 回報機械稽核結果、語意與結構決策、仍需收斂的句型，以及可直接交給 step definition / 測試實作的範圍。
+1. READ 重新讀取**本輪修改過的** feature 與 DSL 檔（非重讀 STANDARDS）。
+2. DELEGATE `uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root <features-root>`（路徑以 repo 為準）。
+3. THINK 結合稽核與 Phase 1 標準：共用契約語意一致、每 case 覆蓋完整、Gherkin 仍為業務語言、DSL 可落地。
+4. WRITE 回報稽核結果、語意決策、待收斂句型與可交 step definition 的範圍。
 
 ## Additional Resources
 

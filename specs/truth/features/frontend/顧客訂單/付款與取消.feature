@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 顧客可使用訂單建立時的應付金額付款 / Example: 顧客完成付款並查看付款狀態
 Feature: 顧客付款與取消自己的訂單
 
+
+  本 Feature 驗證：顧客付款與取消自己的訂單 — 付款結果使用訂單快照金額且不改變出餐狀態；顧客僅能在允許的狀態取消訂單。
   Rule: 付款結果使用訂單快照金額且不改變出餐狀態
 
     Example: 顧客成功付款後看到已付款狀態

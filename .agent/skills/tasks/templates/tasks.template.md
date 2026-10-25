@@ -14,7 +14,8 @@
 |---|---|---|
 | `spec.md` | PLAN_DIR | 需求、User Story、驗收 |
 | `truth-delta.md` | PLAN_DIR | 本 plan 對 Truth 的 ADD/MOD/DEL 摘要（各 Truth owner 一表） |
-| `traceability.md` | PLAN_DIR | acceptance → 介面 Feature 覆蓋（BDD 主模式） |
+| `traceability.md` | PLAN_DIR | 介面情境摘要 + AI Coverage Matrix（BDD 主模式） |
+| `scenario-index.md` | PLAN_DIR | 業務情境索引（人 Review 主入口；BDD 主模式） |
 | `features/acceptance/*.feature` | PLAN_DIR | 整體驗收 Journey |
 | `specs/truth/features/<介面>/<模組>/*.feature` | TRUTH_ROOT | 原子化 Example／Scenario（BDD 主模式） |
 | `specs/truth/features/<介面>/…/dsl.md` | TRUTH_ROOT | Example step 的實作契約 |
@@ -26,6 +27,14 @@
 | `specs/truth/data/data-model.dbml` | TRUTH_ROOT | 資料模型 |
 | `specs/truth/contracts/http-api.yaml` | TRUTH_ROOT | API 契約 |
 | `quickstart.md` | PLAN_DIR 或 repo | 建置與 smoke（可選 Polish） |
+
+## 情境進度（BDD 主模式 — 人 Review）
+
+<!-- 依 acceptance Example／scenario-index.md 填寫；任務完成後將 ⬜ 改為 ✅ 並填入 Tnnn -->
+
+| 業務情境 | 後端 RED | 後端 GREEN | 前端 RED | 前端 GREEN | 備註 |
+| --- | --- | --- | --- | --- | --- |
+| {{acceptance_scenario_title}} | ⬜ {{backend_red_task_or_dash}} | ⬜ {{backend_green_task_or_dash}} | ⬜ {{frontend_red_task_or_dash}} | ⬜ {{frontend_green_task_or_dash}} | {{notes_or_empty}} |
 
 **Organization**: BDD 主模式以 **TRUTH_ROOT 內介面 Feature 檔**為 Phase 單位；**驗收權威** = Truth Feature **Then** + DSL（過渡 `*.test.js` 僅 RED 接通）。若 `truth-delta.md` 含 **MOD/DEL** 列，MUST 在 Phase 2 與 Phase 3 之間插入 **`Phase 2.5: Harness 對齊 Truth delta`**（每筆 MOD/DEL 至少一 task）。Phase 3 起每檔一 Phase，Example 拆 `[BDD:RED]`／`[BDD:GREEN]`／可選 `[BDD:REFACTOR]`。全部 Feature Phase 後 **NFR 重構** Phase。Legacy 模式依 testplan User Story；delta 有 MOD/DEL 時仍須 Phase 2.5。不得混用 BDD 與 legacy 標籤。
 

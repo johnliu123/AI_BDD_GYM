@@ -13,8 +13,8 @@
 
 ## Plan 產物（「這次改什麼」）
 
-- `spec.md`、`research.md`、`plan.md`、`traceability.md`、`tasks.md`
-- `features/acceptance/**/*.feature`
+- `spec.md`、`research.md`、`plan.md`、`traceability.md`、`scenario-index.md`、`tasks.md`
+- `features/acceptance/**/*.feature`、`features/acceptance/情境地圖.md`
 - `ui/ui-plan.md`、`ui/prototype/`
 - `plan.meta.yaml`（由 `/specify` 建立）
 - **`truth-delta.md`**（Truth 變更紀錄；見下節 **`/truth-delta`**）
@@ -72,7 +72,8 @@
 1. `PLAN_DIR/spec.md`
 2. `PLAN_DIR/truth-delta.md`（全文；依表格按需再 READ Truth 檔）
 3. `TRUTH_ROOT` 內被點名的路徑
-4. `PLAN_DIR/traceability.md`（BDD 模式）
+4. `PLAN_DIR/traceability.md`（BDD 模式；人 Review 以 `scenario-index.md` 為主，Coverage Matrix 供 AI 稽核）
+5. `PLAN_DIR/scenario-index.md`（BDD 模式；若 `/dsl-refine` 已產出）
 
 **Harness**：truth-delta 含 **MOD/DEL** 時，`/tasks` MUST 產出 **Phase 2.5**；`/implement` 執行 baseline 與交付前 **全 suite**（見 `skills/tasks/rules/Rule-Tasks-Truth-Delta-與-Harness-對齊.md`、`skills/implement/rules/Rule-Implement-Truth-Delta-Harness-Gates.md`）。BDD 驗收權威 = Truth Feature **Then** + DSL。
 

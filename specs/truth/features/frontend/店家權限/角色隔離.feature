@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家權限依職責隔離 / Example: 菜單管理人員與訂單管理人員只能執行各自職責
 Feature: 店家管理介面依角色限制操作
 
+
+  本 Feature 驗證：店家管理介面依角色限制操作 — 菜單管理角色與訂單管理角色互相隔離。
   Rule: 菜單管理角色與訂單管理角色互相隔離
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家權限依職責隔離 / Example: 菜單管理人員與訂單管理人員只能執行各自職責

@@ -1,6 +1,8 @@
 # Acceptance source: {{acceptance_feature_path}} / Rule: {{acceptance_rule}} / Example: {{acceptance_example}}
 Feature: {{interface_feature_name}}
 
+  本 Feature 驗證：{{one_sentence_validation_scope_summary}}
+
   Rule: {{one_atomic_validation_contract}}
 
     Example: {{example_data_situation}}

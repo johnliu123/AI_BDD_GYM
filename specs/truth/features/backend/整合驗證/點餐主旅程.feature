@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 完整點餐旅程的結果一致 / Example: 顧客完成點餐後店家完成出餐
 Feature: 顧客點餐與店家出餐旅程
 
+
+  本 Feature 驗證：顧客點餐與店家出餐旅程 — 顧客建立訂單後店家完成出餐；建立訂單時必須再次驗證餐點供應狀態；顧客提供的金額不會改變伺服器訂單快照 等。
   Rule: 顧客建立訂單後店家完成出餐
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 完整點餐旅程的結果一致 / Example: 顧客完成點餐後店家完成出餐

@@ -1,5 +1,7 @@
 Feature: 店家操作依角色權限授權
 
+
+  本 Feature 驗證：店家操作依角色權限授權 — 訂單管理權限允許讀取訂單；訂單管理權限不得寫入菜單；菜單管理權限允許寫入菜單 等。
   Rule: 訂單管理權限允許讀取訂單
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家權限依職責隔離 / Example: 菜單管理人員與訂單管理人員只能執行各自職責

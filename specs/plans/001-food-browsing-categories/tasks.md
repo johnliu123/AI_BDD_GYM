@@ -26,6 +26,16 @@
 | `specs/truth/data/data-model.dbml` | TRUTH_ROOT | categories 與 menu_items 關聯 |
 | `specs/truth/contracts/http-api.yaml` | TRUTH_ROOT | `listCategories`、`listMenuItems` |
 
+
+## 情境進度（人 Review）
+
+| 業務情境 | 後端 RED | 後端 GREEN | 前端 RED | 前端 GREEN | 備註 |
+| --- | --- | --- | --- | --- | --- |
+| 顧客依分類瀏覽餐點並確認資訊相符 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 餐點缺少部分資訊時仍保留在菜單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 顧客開啟尚無餐點的菜單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 多筆相似名稱餐點並列時各卡片資訊不混淆 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+
 **Organization**：Phase 3 起每個納入範圍的介面 Feature 檔一 Phase；各 Example 拆 `[BDD:RED]`、`[BDD:GREEN]`。全部 Feature Phase 完成後執行 **NFR 重構** Phase。非行為準備標 `[NON-TDD]` 並說明原因。
 
 ## Phase 1: Setup

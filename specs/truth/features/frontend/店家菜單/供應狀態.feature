@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家維護供應狀態後顧客流程立即遵循最新狀態 / Example: 餐點售完後禁止新增至購物車與建立訂單
 Feature: 店家更新餐點供應狀態
 
+
+  本 Feature 驗證：店家更新餐點供應狀態 — 店家可切換餐點供應狀態；店家可單獨切換規格選項供應狀態。
   Rule: 店家可切換餐點供應狀態
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: 店家維護供應狀態後顧客流程立即遵循最新狀態 / Example: 餐點售完後禁止新增至購物車與建立訂單

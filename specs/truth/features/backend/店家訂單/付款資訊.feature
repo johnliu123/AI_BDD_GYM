@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 店家可檢視並篩選訂單付款資訊 / Example: 店家依付款狀態篩選訂單
 Feature: 店家讀取訂單付款資訊
 
+
+  本 Feature 驗證：店家讀取訂單付款資訊 — 店家列表依付款狀態篩選並回傳快照；無效店家憑證不得讀取付款資訊；店家詳情回傳付款狀態與失敗摘要 等。
   Rule: 店家列表依付款狀態篩選並回傳快照
 
     # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 店家可檢視並篩選訂單付款資訊 / Example: 店家依付款狀態篩選訂單

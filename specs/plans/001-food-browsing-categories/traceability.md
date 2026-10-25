@@ -6,7 +6,34 @@
 - System analysis: `plan.md`
 - Spec requirements: `spec.md`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+> 覆蓋完整性以下方 Coverage Matrix 與機械稽核為準；人 Review 本節即可。
+
+### frontend / 菜單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客依分類瀏覽餐點並確認資訊相符 | 分類篩選後餐點欄位對應同一餐點 | AC: 顧客依分類瀏覽餐點並確認資訊相符 |
+| 餐點缺少部分資訊時仍保留在菜單 | 缺圖片時保留卡片並顯示佔位圖 | AC: 餐點缺少部分資訊時仍保留在菜單 |
+| 顧客開啟尚無餐點的菜單 | 顧客看到空菜單且無虛構餐點 | AC: 顧客開啟尚無餐點的菜單 |
+| 多筆相似名稱餐點並列時各卡片資訊不混淆 | 各卡片名稱、圖片、價格、分類不錯置 | AC: 多筆相似名稱餐點並列時各卡片資訊不混淆 |
+
+### backend / 菜單
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客依分類瀏覽餐點並確認資訊相符 | 餐點資料與分類關聯一致 | AC: 顧客依分類瀏覽餐點並確認資訊相符 |
+| 餐點缺少部分資訊時仍保留在菜單 | 缺圖片時菜單仍回傳該餐點 | AC: 餐點缺少部分資訊時仍保留在菜單 |
+| 顧客開啟尚無餐點的菜單 | 空菜單回傳空餐點集合 | AC: 顧客開啟尚無餐點的菜單 |
+
+### backend; frontend / 菜單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 餐點缺少部分資訊時仍保留在菜單 | 缺價格或分類時保留餐點並顯示明確空值提示 | AC: 餐點缺少部分資訊時仍保留在菜單 |
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

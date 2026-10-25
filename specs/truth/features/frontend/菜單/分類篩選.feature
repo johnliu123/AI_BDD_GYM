@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客瀏覽餐點與分類總驗收旅程.feature / Rule: 顧客可以從菜單辨識餐點及其資訊 / Example: 顧客依分類瀏覽餐點並確認資訊相符
 Feature: 顧客依分類瀏覽餐點
 
+
+  本 Feature 驗證：顧客依分類瀏覽餐點 — 顧客選擇分類後只看到該分類的餐點資訊。
   Rule: 顧客選擇分類後只看到該分類的餐點資訊
 
     Example: 顧客切換分類並辨識餐點資料

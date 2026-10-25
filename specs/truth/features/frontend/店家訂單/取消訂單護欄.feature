@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 已取消訂單不得再進入店家出餐流程 / Example: 店家不能接單已取消訂單
 Feature: 店家看板阻擋已取消訂單操作
 
+
+  本 Feature 驗證：店家看板阻擋已取消訂單操作 — 已取消訂單不得接單；已取消訂單不得推進出餐。
   Rule: 已取消訂單不得接單
 
     # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 已取消訂單不得再進入店家出餐流程 / Example: 店家不能接單已取消訂單

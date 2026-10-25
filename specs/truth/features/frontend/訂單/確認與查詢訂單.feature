@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客建立與查詢訂單.feature / Rule: 顧客可將可用購物車建立為訂單 / Example: 顧客確認購物車後取得訂單紀錄
 Feature: 顧客確認與查詢訂單
 
+
+  本 Feature 驗證：顧客確認與查詢訂單 — 顧客確認可用購物車後取得訂單結果；顧客只能查詢自己建立的訂單快照。
   Rule: 顧客確認可用購物車後取得訂單結果
 
     Example: 顧客確認購物車並看到訂單明細

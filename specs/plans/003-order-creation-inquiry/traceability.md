@@ -7,7 +7,31 @@
 - System analysis: `plan.md`
 - Spec requirements: `spec.md`
 
-## Coverage Matrix
+## 介面情境摘要（人 Review）
+
+> 覆蓋完整性以下方 Coverage Matrix 與機械稽核為準；人 Review 本節即可。
+
+### frontend / 訂單
+
+| 驗收情境 | 前端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客確認購物車後取得訂單紀錄 | 建立唯一訂單、快照金額與明細並清空同 session 購物車 | AC: 顧客確認購物車後取得訂單紀錄 |
+| 空購物車或含不可用項目時建立訂單被拒絕 | 無可用項目時拒絕且保留購物車、不寫入訂單 | AC: 空購物車或含不可用項目時建立訂單被拒絕 |
+| 顧客使用訂單編號查詢自己的訂單 | 同 session 查詢取得持久化狀態、明細與建立時金額快照 | AC: 顧客使用訂單編號查詢自己的訂單 |
+| 其他訪客無法查詢該訂單 | 跨 session 查詢不洩漏訂單內容或存在性 | AC: 其他訪客無法查詢該訂單 |
+
+### backend / 訂單
+
+| 驗收情境 | 後端驗什麼 | 來源 |
+| --- | --- | --- |
+| 顧客確認購物車後取得訂單紀錄 | 原子建單、供應驗證、冪等及快照寫入 | AC: 顧客確認購物車後取得訂單紀錄 |
+| 顧客端金額不會覆寫訂單快照 | 伺服器只依建立當下菜單價格持久化金額，不採信請求金額 | AC: 顧客端金額不會覆寫訂單快照 |
+| 空購物車或含不可用項目時建立訂單被拒絕 | 重驗供應狀態並拒絕空／不可用 cart | AC: 空購物車或含不可用項目時建立訂單被拒絕 |
+| 顧客因未收到首次結果而再次送出同一筆訂單 | 同一 session/key 重送回原訂單，不建立第二筆 | AC: 顧客因未收到首次結果而再次送出同一筆訂單 |
+| 顧客使用訂單編號查詢自己的訂單 | 訂單查詢回傳原快照、不依新菜單價格重算 | AC: 顧客使用訂單編號查詢自己的訂單 |
+| 其他訪客無法查詢該訂單 | 跨 session query 使用與不存在 order 相同的結果 | AC: 其他訪客無法查詢該訂單 |
+
+## Coverage Matrix（AI 機械稽核 — 不要求使用者逐行 Review）
 
 | Acceptance Feature | Acceptance Rule | Acceptance Example | Spec Requirement IDs | Acceptance assertion / invariant | Status | Interface | Module | Derived Feature | Derived Rule / Example | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

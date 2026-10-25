@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客下單.feature / Rule: 顧客可使用符合資格的優惠 / Example: 顧客套用折扣碼完成下單
 Feature: 結帳頁套用折扣碼
 
+  本 Feature 驗證：結帳頁套用合格折扣碼後，畫面折抵狀態與金額摘要與後端訂單一致。
+
   Rule: 結帳頁套用合格折扣碼後必須顯示折抵結果
 
     Example: 商品小計 1050 元時套用 WELCOME100

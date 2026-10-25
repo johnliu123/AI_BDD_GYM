@@ -13,13 +13,13 @@
 | 步驟 | Skill | Plan 產物 | Truth 產物 | 說明 |
 | --- | --- | --- | --- | --- |
 | 1 | `/specify` | `specs/plans/<id>/spec.md`、`plan.meta.yaml`、`truth-delta.md`（骨架） | — | **MUST** 新建 plan 包（除非使用者明示延續既有 `PLAN_DIR`） |
-| 2 | `/spec-by-example` | `features/acceptance/*.feature` | — | 整體驗收 Journey；`/clarify` 收斂標籤 |
+| 2 | `/spec-by-example` | `features/acceptance/*.feature`、`features/acceptance/情境地圖.md` | — | 整體驗收 Journey；`/clarify` 收斂標籤（可豁免） |
 | 3 | `/technical-research` | `research.md` | `truth/techstack.md` + DELEGATE `/truth-delta` | Truth owner |
 | 4 | `/system-analysis` | `plan.md` | — | Wave 委派；`ui/**`→ plan，`api/data`→ truth |
 | 4a | `/ui-plan` | `ui/ui-plan.md`、`ui/prototype/` | — | 非 Truth owner |
 | 4b | `/data-plan` | — | `truth/data/data-model.dbml` + DELEGATE `/truth-delta` | Truth owner |
 | 4c | `/api-plan` | — | `truth/contracts/http-api.yaml` + DELEGATE `/truth-delta` | Truth owner |
-| 5 | `/dsl-refine` | `traceability.md` | `truth/features/**` + DELEGATE `/truth-delta` | Truth owner |
+| 5 | `/dsl-refine` | `traceability.md`、`scenario-index.md` | `truth/features/**` + DELEGATE `/truth-delta` | Truth owner；人 Review 以 `scenario-index.md` 為主 |
 | 6 | `/tasks` | `tasks.md` | — | 必讀 `truth-delta.md`；MOD/DEL → Phase 2.5 Harness |
 | 7 | `/analyze` | — | — | 唯讀；含 truth-delta vs truth 一致性 |
 | 8 | `/implement` | `tasks.md` `[x]` | — | delta MOD/DEL → baseline＋交付前全 suite；詢問 commit |
@@ -31,6 +31,16 @@
 - **PLAN_DIR**：`specs/plans/<NNN-short-name>/`（**FEATURE_DIR** 為同義舊名）
 - **TRUTH_ROOT**：`specs/truth/`
 - **Truth 變更紀錄**：`PLAN_DIR/truth-delta.md`（各 Truth owner 一表；**僅** `/truth-delta` 追加列；見 `plan-truth-workflow.md`）
+
+## 精簡路徑（非完整主線時）
+
+| 情境 | 建議指令序列 |
+| --- | --- |
+| 純後端 API 功能 | `/specify` → `/spec-by-example` → `/technical-research` → `/api-plan` → `/dsl-refine` → `/tasks` → `/implement` |
+| 小型 bug fix（已有 spec 與 Feature） | `/dsl-refine`（更新受影響 Feature）→ `/tasks`（新增修復任務）→ `/implement` |
+| 純前端 UI 調整 | `/specify` → `/spec-by-example` → `/ui-plan` → `/dsl-refine` → `/tasks` → `/implement` |
+
+精簡路徑仍須滿足各 skill 前置閘門；可跳過的步驟須在交付摘要說明依據。
 
 ## 選用分支（不取代主線順序）
 

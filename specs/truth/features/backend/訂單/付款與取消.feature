@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 顧客可使用訂單建立時的應付金額付款 / Example: 顧客完成付款並查看付款狀態
 Feature: 後端處理訂單付款與取消
 
+
+  本 Feature 驗證：後端處理訂單付款與取消 — 付款金額以訂單快照為準並保存正交付款狀態；付款失敗可重試且冪等只保護成功結果；顧客取消與付款狀態在同一權威訂單上協調。
   Rule: 付款金額以訂單快照為準並保存正交付款狀態
 
     Example: 付款成功後保存 paid 狀態及快照金額

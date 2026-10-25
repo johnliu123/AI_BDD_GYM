@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 顧客查詢反映持久化的付款與取消狀態 / Example: 顧客查詢付款失敗訂單
 Feature: 顧客查詢付款與取消狀態
 
+
+  本 Feature 驗證：顧客查詢付款與取消狀態 — 顧客查詢顯示付款失敗狀態；顧客查詢顯示已取消狀態。
   Rule: 顧客查詢顯示付款失敗狀態
 
     # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 顧客查詢反映持久化的付款與取消狀態 / Example: 顧客查詢付款失敗訂單

@@ -1,3 +1,13 @@
+
+## 情境進度（人 Review）
+
+| 業務情境 | 後端 RED | 後端 GREEN | 前端 RED | 前端 GREEN | 備註 |
+| --- | --- | --- | --- | --- | --- |
+| 店家查看待處理訂單及其明細 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 未獲授權的人員無法查看訂單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 店家接單、開始出餐並完成訂單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 店家無法跳過流程或倒退已完成訂單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+
 ﻿# Tasks: 點餐系統第四迭代－店家管理與出餐流程
 
 **Plan directory (PLAN_DIR)**: `specs/plans/004-merchant-serving-workflow/`

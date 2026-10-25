@@ -11,6 +11,16 @@ disable-model-invocation: true
 
 當需求仍有細節不足、定義模糊或多種合理解讀時，先補足決策所需的上下文，再用好懂且可比較的選項向使用者提問，讓使用者拍板，而不是由 AI 自行補完。
 
+## 豁免判準（呼叫者可跳過本 Skill）
+
+若以下三個條件**同時**成立，呼叫者（例如 `/spec-by-example`）可跳過 `/clarify`：
+
+1. spec 中無標記為「假設」或未確認的待決事項
+2. acceptance Feature 中無矛盾或多義的 Then
+3. 所有 Rule 的驗收結果都可從 spec 明確推導
+
+跳過時 MUST 在交付摘要中列出上述三項判斷依據。
+
 # SOP
 
 ## Phase 1 -- 收斂本輪訪談缺口

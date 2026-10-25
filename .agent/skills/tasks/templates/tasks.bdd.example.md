@@ -22,6 +22,16 @@
 | `ui/ui-plan.md`、`ui/prototype/` | PLAN_DIR | UI |
 | `specs/truth/data/data-model.dbml` | TRUTH_ROOT | DBML |
 | `specs/truth/contracts/http-api.yaml` | TRUTH_ROOT | OpenAPI |
+| `scenario-index.md` | PLAN_DIR | 業務情境索引（人 Review） |
+
+## 情境進度（人 Review）
+
+| 業務情境 | 後端 RED | 後端 GREEN | 前端 RED | 前端 GREEN | 備註 |
+| --- | --- | --- | --- | --- | --- |
+| 顧客依分類瀏覽餐點並確認資訊相符 | ⬜ T003 | ⬜ T004 | ⬜ T020 | ⬜ T021 | 對齊 scenario-index |
+| 餐點缺少部分資訊時仍保留在菜單 | ⬜ | ⬜ | ⬜ | ⬜ | |
+| 顧客開啟尚無餐點的菜單 | ⬜ | ⬜ | ⬜ | ⬜ | |
+| 多筆相似名稱餐點並列時各卡片資訊不混淆 | ⬜ | ⬜ | ⬜ | ⬜ | |
 
 **Organization**：若 `truth-delta.md` 有 **MOD/DEL**，先 **Phase 2.5 Harness 對齊**（每 delta 列至少一 task；Checkpoint 全 suite）。Phase 3 起每 **Truth 介面 Feature 檔**一 Phase；**Then 權威**在 Truth Feature。Example 交錯 `[BDD:RED]`、`[BDD:GREEN]`。之後 **NFR 重構** Phase。
 

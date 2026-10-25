@@ -2,6 +2,14 @@
 
 {{brief_scope_description}}
 
+## 業務 DSL（人 Review）
+
+| 句型 | 參數 | 意思 |
+| --- | --- | --- |
+| `{{sentence_for_humans}}` | {{parameters_or_none}} | {{plain_language_meaning}} |
+
+## 技術 DSL（測試落地參考）
+
 ## Given 句型
 
 | DSL 句型 | Gherkin 參數 | Data Table 參數 | 預設參數 | {{interface_implementation_semantics_header}} |

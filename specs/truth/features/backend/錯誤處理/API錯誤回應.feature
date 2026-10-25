@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: API 錯誤一致且不洩漏內部細節 / Example: 可預期的拒絕以一致方式呈現
 Feature: API 錯誤回應一致且安全
 
+
+  本 Feature 驗證：API 錯誤回應一致且安全 — 可預期錯誤保留穩定業務結果且不產生部分寫入；未預期錯誤不向請求者洩漏內部細節。
   Rule: 可預期錯誤保留穩定業務結果且不產生部分寫入
 
     # Acceptance source: features/acceptance/店家菜單管理與整合驗證.feature / Rule: API 錯誤一致且不洩漏內部細節 / Example: 可預期的拒絕以一致方式呈現

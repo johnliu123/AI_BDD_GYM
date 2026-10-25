@@ -1,6 +1,8 @@
 # Acceptance source: features/acceptance/顧客瀏覽餐點與分類總驗收旅程.feature / Rule: 顧客可以從菜單辨識餐點及其資訊 / Example: 顧客依分類瀏覽餐點並確認資訊相符
 Feature: 依分類讀取餐點
 
+
+  本 Feature 驗證：依分類讀取餐點 — 菜單餐點必須回傳其正確分類與顯示資料；沒有菜單資料時回傳空的餐點集合。
   Rule: 菜單餐點必須回傳其正確分類與顯示資料
 
     # Acceptance source: features/acceptance/顧客瀏覽餐點與分類總驗收旅程.feature / Rule: 顧客可以從菜單辨識餐點及其資訊 / Example: 顧客依分類瀏覽餐點並確認資訊相符
