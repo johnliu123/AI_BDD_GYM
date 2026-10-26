@@ -51,7 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         type=Path,
         metavar="<features-root>",
-        help="介面 features 根目錄，例如 specs/truth/features/backend",
+        help=(
+            "介面 features 根目錄（MUST 為 backend 或 frontend 一層），"
+            "例如 specs/truth/features/backend；"
+            "其下為 <功能模組>/<檔名>.feature 與 <功能模組>/dsl.md。"
+            "勿傳功能模組子目錄（如 backend/菜單）。"
+        ),
     )
     return parser
 

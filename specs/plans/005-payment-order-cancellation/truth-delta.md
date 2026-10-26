@@ -34,4 +34,6 @@
 
 | Op | 路徑／錨點 | 摘要 | 原因 | Spec 追溯 |
 | --- | --- | --- | --- | --- |
-| *(尚無)* | | | | |
+| ADD | `specs/truth/features/backend/訂單/付款與取消.feature#pending 後 5xx 不寫 paid 冪等且同 key 可安全重試` | US2·情境4 後端 Example；對應 acceptance「付款中斷後以相同冪等鍵安全重試」 | analyze Findings E1/G1；TP-010 seam 補齊 | FR-012；US2·情境4 |
+| MOD | `specs/truth/features/backend/訂單/dsl.md` | 5xx fault／重試 step 列 | 同上 | FR-012 |
+| *(harness)* | `tasks.md` Phase 2.5 T002a–T002b | DSL／整合測試對齊上述 ADD/MOD | Rule-Tasks Phase 2.5 | FR-012 |

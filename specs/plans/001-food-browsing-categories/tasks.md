@@ -31,10 +31,10 @@
 
 | 業務情境 | 後端 RED | 後端 GREEN | 前端 RED | 前端 GREEN | 備註 |
 | --- | --- | --- | --- | --- | --- |
-| 顧客依分類瀏覽餐點並確認資訊相符 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
-| 餐點缺少部分資訊時仍保留在菜單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
-| 顧客開啟尚無餐點的菜單 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
-| 多筆相似名稱餐點並列時各卡片資訊不混淆 | ⬜ | ⬜ | ⬜ | ⬜ | 執行 tasks 後填入 Tnnn |
+| 顧客依分類瀏覽餐點並確認資訊相符 | T003、T005 | T004、T006 | T015 | T016 | 回溯完成 `[x]` |
+| 餐點缺少部分資訊時仍保留在菜單 | T009、T011、T013 | T010、T012、T014 | T019、T021、T023 | T020、T022、T024 | 回溯完成 `[x]` |
+| 顧客開啟尚無餐點的菜單 | T007 | T008 | T025 | T026 | 回溯完成 `[x]` |
+| 多筆相似名稱餐點並列時各卡片資訊不混淆 | — | — | T016a | T016b | 回溯完成 `[x]` |
 
 **Organization**：Phase 3 起每個納入範圍的介面 Feature 檔一 Phase；各 Example 拆 `[BDD:RED]`、`[BDD:GREEN]`。全部 Feature Phase 完成後執行 **NFR 重構** Phase。非行為準備標 `[NON-TDD]` 並說明原因。
 
@@ -86,7 +86,7 @@
 | `specs/truth/techstack.md` | 測試命令 | `techstack:backend`; `techstack:frontend` | 全 suite smoke |
 
 - [x] T002a [BDD:REFACTOR] 核對並更新 backend menu 相關 step／測試断言，使公開菜單讀取 Example 的 Given/When/Then 對齊 `backend/菜單/dsl.md` 新增列（含分類篩選、空菜單、缺欄位餐點）← `truth-delta:dsl-refine#1`; `dsl:specs/truth/features/backend/菜單/dsl.md#菜單資料中有多個分類及其所屬餐點`; `feature:specs/truth/features/backend/菜單/依分類讀取餐點.feature#顧客讀取菜單時餐點欄位對應正確分類`; `spec:FR-001`; `spec:FR-002`
-- [x] T002b [NON-TDD] 執行 `audit_feature_dsl_topology.py --root specs/truth/features/backend/菜單` 或等價 menu 模組 smoke，確認 001 介面 Feature 與 DSL 拓樸無 step 缺 row ← `truth-delta:dsl-refine#1`; `techstack:backend`
+- [x] T002b [NON-TDD] 執行 `audit_feature_dsl_topology.py --root specs/truth/features/backend`（介面根，非 `backend/菜單` 子目錄）或等價 menu 模組 smoke，確認 001 介面 Feature 與 DSL 拓樸無 step 缺 row ← `truth-delta:dsl-refine#1`; `techstack:backend`
 
 **Checkpoint**：依 `techstack.md` 執行 backend（及必要 frontend menu）測試一次；公開菜單讀取相關 Example 全綠。
 

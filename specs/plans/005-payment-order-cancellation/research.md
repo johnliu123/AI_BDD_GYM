@@ -31,6 +31,7 @@
 - **理由**（**Rationale**）：FR-012、SC-006、spec 假設 TTL 24h。
 - **考慮過的替代方案**（**Alternatives considered**）：與建單共用 `order_idempotency_keys` 會混淆資源語意。
 - **失敗處理**（**Failure handling**）：缺 key 時每次 pay 為獨立嘗試（仍受 `pending`／`paid` 狀態拒絕）。
+- **測試故障注入**（**Test fault injection**）：US2·情境4 之 pending 後 **5xx** 由 **`PAYMENT_TEST_ABORT_AFTER_PENDING=1`** 觸發；權威說明見 **`plan.md`「設計決策·付款故障注入」**；production 禁止啟用。
 
 ### 顧客取消與 pending 競態
 

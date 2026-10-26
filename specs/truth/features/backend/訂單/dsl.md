@@ -101,6 +101,9 @@
 | `顧客再次發起新付款` | 無 | 不支援 | 無 | `怎麼做`：對 paid 或 non-stale pending 訂單發起新 pay；`權威狀態落地`：拒絕重複付款；`回寫`：原狀態或已付款結果。 |
 | `顧客重新付款並成功` | 無 | 不支援 | 無 | `怎麼做`：failed 訂單重新 pay 並使 stub 成功；`權威狀態落地`：failed → pending → paid；`回寫`：成功結果。 |
 | `顧客重送同一付款請求` | 無 | 不支援 | 無 | `怎麼做`：相同 guest session 與 idempotency key 重送；`權威狀態落地`：命中 paid mapping；`回寫`：原結果，不再次呼叫成功扣款。 |
+| `付款服務設定為 pending 後回傳 5xx 中斷` | 無 | 不支援 | 無 | `怎麼做`：測試層設 `PAYMENT_TEST_ABORT_AFTER_PENDING=1`（見 plan 故障注入 seam）；`權威狀態落地`：pending 已寫入交易內、stub 完成前中斷；`不該發生`：寫入 paid idempotency mapping。 |
+| `顧客以冪等鍵「{鍵}」發起付款` | `鍵`：1–128 字元 idempotency key。 | 不支援 | 無 | `怎麼做`：帶 `Idempotency-Key` header 呼叫 pay；`回寫`：依當次結果（含 5xx）。 |
+| `付款服務恢復正常且顧客以相同冪等鍵重試付款` | 無 | 不支援 | 無 | `怎麼做`：清除 fault env 後以相同 key 再送 pay；`權威狀態落地`：若無 paid mapping 則完成 stub 成功並寫入 mapping。 |
 | `顧客查詢該訂單` | 無 | 不支援 | 無 | `怎麼做`：以目前 server-validated guest session 查詢訂單；`權威狀態落地`：唯讀同一 orders row；`回寫`：狀態、付款標籤及快照；`不必查`：不得跨 session 洩漏。 |
 
 ## Then 句型
@@ -119,6 +122,8 @@
 | `先前失敗結果仍可查詢` | 無 | 不支援 | 無 | `必查`：先前失敗時間／摘要保留可讀。 |
 | `系統回傳原付款成功結果` | 無 | 不支援 | 無 | `必查`：冪等命中返回相同 order/payment result。 |
 | `不會再次執行扣款或新增狀態轉換` | 無 | 不支援 | 無 | `必查`：付款成功計數、payment_status_updated_at 與 mapping 不重複變更。 |
+| `首次回應為伺服器錯誤且不建立代表付款成功的去重紀錄` | 無 | 不支援 | 無 | `必查`：HTTP 500；payment_idempotency_keys 列數不增（相對重試前 baseline）。 |
+| `重試後訂單付款狀態更新為「已付款」` | 無 | 不支援 | 無 | `必查`：同 key 重試成功後 payment_status=paid 且僅一筆 paid mapping。 |
 | `訂單付款狀態持久化為 failed` | 無 | 不支援 | 無 | `必查`：pending → failed 及失敗時間／摘要保存。 |
 | `不建立代表 paid 成功的付款冪等記錄` | 無 | 不支援 | 無 | `必查`：payment_idempotency_keys 無該 paid success mapping。 |
 | `訂單狀態持久化為 cancelled` | 無 | 不支援 | 無 | `必查`：status=cancelled 且 cancelled_at 保存。 |

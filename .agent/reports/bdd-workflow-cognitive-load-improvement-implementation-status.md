@@ -1,6 +1,6 @@
 # BDD Workflow 認知負擔改進提案 — 落地狀態對照
 
-**日期**：2026-10-26（更新：§2.2、§4.4 補齊；範例與 `specs/` 遷移；Truth 購物車 §3.2 Then 去重）  
+**日期**：2026-10-26（更新：§2.2、§4.4 補齊；範例與 `specs/` 遷移；Truth 購物車 §3.2 Then 去重；001–006 implement 交付前 specs 同步）  
 **對照來源**：[bdd-workflow-cognitive-load-improvement-proposal.md](./bdd-workflow-cognitive-load-improvement-proposal.md)（2026-10-26）  
 **檢查範圍**：`.agent/skills/spec-by-example/`、`.agent/skills/dsl-refine/`、`.agent/skills/gherkin-and-dsl/`、`.agent/skills/clarify/`、`.agent/skills/tasks/`、`.agent/references/`；靜態 grep／讀檔對照。
 
@@ -140,7 +140,8 @@
 | `specs/plans/*/scenario-index.md` | ✅ **6** 份 |
 | `specs/plans/*/traceability.md` | ✅ 已加 **介面情境摘要** + Matrix AI 標題 |
 | `specs/plans/*/features/acceptance/*.feature` | ✅ 各 Example 末行 `# 驗收結果：…`（摘要自 Then） |
-| `specs/plans/*/tasks.md` | ✅ 已加 **情境進度** 表（若原本已有則略過） |
+| `specs/plans/*/tasks.md` | ✅ **情境進度** 表已回填 T 編號（001–006） |
+| `specs/truth/features/acceptance-to-interface-traceability.md` | ✅ 跨 plan 累積索引（2026-10-26） |
 | `specs/truth/features/**/*.feature` | ✅ 已加 `本 Feature 驗證：…`（若原本無） |
 | `specs/truth/features/**/dsl.md` | ✅ 已加 **業務 DSL（人 Review）** + **技術 DSL** 小節 |
 | Truth Then 句型語意去重（§3.2 資料層） | ✅ **購物車**（`backend/購物車`、`frontend/購物車`）：`.feature` + `dsl.md` 業務／技術 Then 已合併 canonical 句型（STANDARDS §1.1）；其他 Truth 模組未掃描去重 |
@@ -155,7 +156,9 @@
 |---|---|
 | 業務 DSL「意思」欄 | 可人工潤飾 Truth `dsl.md` 業務列（目前多為句型導出摘要） |
 | 其他模組 Then 去重 | 非購物車 Truth `dsl.md` 仍可能有 §1.1 級相似句型，按需逐模組合併 |
-| 情境進度 Tnnn | 各 plan `tasks.md` 進度表可隨實作填入實際 task 編號 |
+| 情境進度 Tnnn | ✅ 001–006 `tasks.md` 情境進度表已回填 T 編號（2026-10-26） |
+| 002–006 tasks BDD 化 | ✅ 與 001 同模式：Feature 檔 Phase、`[BDD:RED/GREEN]`、`acceptance`/`feature`/`dsl` 錨點（2026-10-26） |
+| `specs/` 與 git 同步 | ✅ 001–006 plans、`acceptance-to-interface-traceability.md`、005 Truth delta／付款 Example、`techstack.md` 稽核根路徑已對齊；`tmp-migrate-bdd-artifacts.mjs` 可重跑補 `# 驗收結果` |
 | 本狀態檔 | Skill 或遷移腳本變更時同步 §2、§5、§7 |
 
 ---

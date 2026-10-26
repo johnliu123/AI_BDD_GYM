@@ -54,7 +54,7 @@ disable-model-invocation: true
 ## Phase 6 -- 檢查可落地性
 
 1. READ 重新讀取**本輪修改過的** feature 與 DSL 檔（非重讀 STANDARDS）。
-2. DELEGATE `uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root <features-root>`（路徑以 repo 為準）。
+2. DELEGATE `uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root specs/truth/features/<介面>`（`backend` 或 `frontend` 介面根；勿用功能模組子目錄）。
 3. THINK 結合稽核與 Phase 1 標準：共用契約語意一致、每 case 覆蓋完整、Gherkin 仍為業務語言、DSL 可落地。
 4. WRITE 回報稽核結果、語意決策、待收斂句型與可交 step definition 的範圍。
 

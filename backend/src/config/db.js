@@ -39,8 +39,17 @@ export async function ensureDatabaseReady() {
           pool = await createMssqlPool();
         }
       }
-      await runMigrations(pool);
-      await refreshMenuCatalog(pool);
+      try {
+        await runMigrations(pool);
+        await refreshMenuCatalog(pool);
+      } catch (error) {
+        const code = error?.code ?? error?.cause?.code;
+        const hint =
+          code === 'ETIMEOUT'
+            ? ' MSSQL 查詢逾時：確認 SQL Server 已啟動、無長時間鎖定，或提高 MSSQL_REQUEST_TIMEOUT_MS；本機開發可設 USE_MEMORY_DB=1 略過 MSSQL。'
+            : '';
+        throw new Error(`Database initialization failed:${hint} ${error.message}`, { cause: error });
+      }
     })();
   }
   return initPromise;

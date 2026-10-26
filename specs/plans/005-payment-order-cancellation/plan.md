@@ -72,6 +72,17 @@ backend/
 
 - `OrderStatus` 新增 **`cancelled`**；merchant 動作前置檢查。依據：FR-019、research「出餐狀態擴充 cancelled」。
 
+### 設計決策·付款故障注入（測試專用）
+
+- **Seam**：環境變數 **`PAYMENT_TEST_ABORT_AFTER_PENDING=1`**。在 `paymentService` 於條件 UPDATE 將訂單鎖定為可付款、`pending` 已寫入交易內、**尚未**執行 stub 成功／失敗更新與 **`paid` 冪等 mapping 寫入** 前，回 **500** `INTERNAL_ERROR`（模擬付款中斷）。
+- **用途**：驗收 **spec US2·情境4**／**FR-012**：客戶端在 **5xx** 後以相同 **`Idempotency-Key`** 重試時，不得產生兩次成功扣款；未 **`paid`** 的中斷 **不寫** `payment_idempotency_keys`。
+- **安全**：`backend/src/config/db.js` 於 **`NODE_ENV=production`** 且該變數為 `1` 時啟動失敗；`.env.example` 僅註解說明。整合測試見 `payment-failure-idempotency.test.js`（`FX-PAYMENT-5XX-RETRY`）；**不得**作為 production 或對外 API 契約行為。
+- **對照**：`research.md`「付款冪等」、`testplan.md` TP-010、`specs/truth/features/backend/訂單/付款與取消.feature#pending 後 5xx 不寫 paid 冪等且同 key 可安全重試`。
+
+### 設計決策·MSSQL smoke（環境門控）
+
+- **`npm run smoke:mssql:005`**：未設定 **`MSSQL_*`** 時腳本 **exit 0 skip**（見 `backend/scripts/smoke-mssql-005.mjs`）；**不取代** memory DB 整合測試。真實 SQL Server schema 驗證於 **CI**（`.github/workflows/backend-ci.yml`）或本機設定 `MSSQL_*` 後執行。
+
 ## 分析流程規劃
 
 本段只規劃分析範圍與 Wave；結論見各端點產物。

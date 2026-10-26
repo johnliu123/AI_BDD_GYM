@@ -38,6 +38,12 @@
 - **`MERCHANT_CREDENTIALS`** 範例（`.env.example` 文件化，勿 commit 真 secret）：
   `[{"token":"kitchen-secret","roles":["orders"]},{"token":"menu-secret","roles":["menu"]}]`
 - 菜單 migration 須在接單系統啟動前完成；rollback 策略：保留 006 表，不 downgrade 生產資料。
+## Truth Feature／DSL 拓樸稽核
+
+- 命令：`uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root specs/truth/features/backend`（或 `frontend`）。
+- **`--root` 必須是介面根**（`backend`／`frontend` 那一層）；功能模組為其子目錄（如 `backend/訂單/*.feature` + `backend/訂單/dsl.md`）。
+- 勿以 `backend/菜單` 等模組路徑為 root（會誤報 feature 直接置於介面根）。
+
 ## 整合測試
 
 - **預設**：`backend/` 下 **`USE_MEMORY_DB=1 npm test`** **包含** `src/__tests__/integration/`（**FR-019**、**NFR-012**）。
@@ -65,10 +71,11 @@
 
 **MSSQL**
 
-5. 設定 `MSSQL_*` 後：`npm run smoke:mssql:028`（TP-028 專用 DB 預設 `${MSSQL_DATABASE}_TP028`）；`npm run smoke:mssql:005`；啟動服務後 `GET /api/menu-items` 讀 DB 種子。
+5. 設定 `MSSQL_*` 後：`npm run smoke:mssql:028`（TP-028 專用 DB 預設 `${MSSQL_DATABASE}_TP028`）；`npm run smoke:mssql:005`（未設定 `MSSQL_*` 時 exit 0 skip）；啟動服務後 `GET /api/menu-items` 讀 DB 種子。
+6. **005 付款 5xx 重試（測試專用）**：整合測試可設 `PAYMENT_TEST_ABORT_AFTER_PENDING=1`；權威見 `specs/plans/005-payment-order-cancellation/plan.md`「設計決策·付款故障注入」；production 禁止。
 
 **手動 UI**
 
-6. `MERCHANT_TOKEN` 或 menu token；`#/merchant/menu` 售完 → 顧客菜單售完 → 購物車不可用。
+7. `MERCHANT_TOKEN` 或 menu token；`#/merchant/menu` 售完 → 顧客菜單售完 → 購物車不可用。
 
 <!-- Constitution self-check: pass -->

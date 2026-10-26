@@ -53,6 +53,16 @@ Feature: 後端處理訂單付款與取消
       Then 系統回傳原付款成功結果
       And 不會再次執行扣款或新增狀態轉換
 
+    # Acceptance source: features/acceptance/付款取消與狀態查詢總驗收旅程.feature / Rule: 付款失敗後顧客可以安全重試 / Example: 付款中斷後以相同冪等鍵安全重試
+    Example: pending 後 5xx 不寫 paid 冪等且同 key 可安全重試
+      Given 一筆出餐狀態為「已建立」且付款狀態為「未付款」的訂單
+      And 付款服務設定為 pending 後回傳 5xx 中斷
+      When 顧客以冪等鍵「retry-after-5xx」發起付款
+      And 付款服務恢復正常且顧客以相同冪等鍵重試付款
+      Then 首次回應為伺服器錯誤且不建立代表付款成功的去重紀錄
+      And 重試後訂單付款狀態更新為「已付款」
+      And 不會再次執行扣款或新增狀態轉換
+
     # Acceptance source: features/acceptance/顧客付款與取消訂單.feature / Rule: 付款失敗後顧客可以安全重試 / Example: 付款失敗後以同一訂單再次付款成功
     Example: 付款失敗不寫入 paid 冪等記錄
       Given 一筆付款處理中的訂單且付款服務回報失敗

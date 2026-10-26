@@ -19,6 +19,7 @@
 | 顧客端提交不同金額不會改變應付金額 | client amount 不會覆寫應付金額或快照 | AC: 顧客端提交不同金額不會改變應付金額 |
 | 已付款或付款處理中的訂單不會重複扣款 | paid 或 non-stale pending 不啟動第二次付款 | AC: 已付款或付款處理中的訂單不會重複扣款 |
 | 付款失敗後以同一訂單再次付款成功 | failed 可重試並轉 paid，快照不變 | AC: 付款失敗後以同一訂單再次付款成功 |
+| 付款中斷後以相同冪等鍵安全重試 | pending 後 5xx 不寫 paid mapping，同 key 重試僅成功一次 | AC: 付款中斷後以相同冪等鍵安全重試（spec US2·情境4） |
 | 顧客重送已成功的同一付款請求 | 同 key 重送回原成功結果，不重複扣款 | AC: 顧客重送已成功的同一付款請求 |
 | 顧客取消尚未接單且未付款的訂單 | created/unpaid 可取消，保留訂單快照並阻擋後續操作 | AC: 顧客取消尚未接單且未付款的訂單 |
 | 顧客取消已付款但尚未接單的訂單 | paid cancel 同步 refunded 並保留快照 | AC: 顧客取消已付款但尚未接單的訂單 |
@@ -35,6 +36,7 @@
 | 顧客端提交不同金額不會改變應付金額 | pay result 依 orders.total_amount，不採信 request amount | AC: 顧客端提交不同金額不會改變應付金額 |
 | 已付款或付款處理中的訂單不會重複扣款 | 後端不建立第二個 payment attempt | AC: 已付款或付款處理中的訂單不會重複扣款 |
 | 付款失敗後以同一訂單再次付款成功 | failed 訂單重試成功，保留前次失敗摘要 | AC: 付款失敗後以同一訂單再次付款成功 |
+| 付款中斷後以相同冪等鍵安全重試 | pending 後 5xx 不寫 paid mapping，同 key 重試僅一次成功 | AC: 付款中斷後以相同冪等鍵安全重試 |
 | 顧客重送已成功的同一付款請求 | 只有 paid 成功寫入冪等 mapping，重送不二次執行 | AC: 顧客重送已成功的同一付款請求 |
 | 顧客取消尚未接單且未付款的訂單 | backend 交易取消 order 且後續 pay/merchant action 拒絕 | AC: 顧客取消尚未接單且未付款的訂單 |
 | 顧客取消已付款但尚未接單的訂單 | backend 同一交易 cancelled+refunded 並記 refunded_at | AC: 顧客取消已付款但尚未接單的訂單 |
@@ -80,6 +82,7 @@
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 付款失敗後顧客可以安全重試 | 付款失敗後以同一訂單再次付款成功 | `FR-004`; `FR-005`; `FR-010`; `FR-015`; `SC-002` | failed 可重試並轉 paid，快照不變 | assigned | frontend | 顧客訂單 | `../../truth/features/frontend/顧客訂單/付款與取消.feature` | 付款結果使用訂單快照金額且不改變出餐狀態 / 付款失敗後顧客可以重試成功 | UI 顯示可重試及成功結果 |
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 付款失敗後顧客可以安全重試 | 付款失敗後以同一訂單再次付款成功 | `FR-004`; `FR-005`; `FR-010`; `FR-015`; `SC-002` | failed 訂單重試成功，保留前次失敗摘要 | assigned | backend | 訂單 | `../../truth/features/backend/訂單/付款與取消.feature` | 付款失敗可重試且冪等只保護成功結果 / 付款失敗後重試可更新為 paid | 付款狀態及 history 欄位驗證 |
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 付款失敗後顧客可以安全重試 | 顧客重送已成功的同一付款請求 | `FR-012`; `FR-015`; `BR-004`; `SC-006` | 同 key 重送回原成功結果，不重複扣款 | assigned | frontend | 顧客訂單 | `../../truth/features/frontend/顧客訂單/付款與取消.feature` | 付款結果使用訂單快照金額且不改變出餐狀態 / 顧客重送成功付款請求不會重複扣款 | 顯示原結果 |
+| `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 付款失敗後顧客可以安全重試 | 付款中斷後以相同冪等鍵安全重試 | `FR-012`; `FR-015`; `BR-004`; `SC-006` | pending 後 5xx 不寫 paid mapping，同 key 重試僅一次成功扣款 | assigned | backend | 訂單 | `../../truth/features/backend/訂單/付款與取消.feature` | 付款失敗可重試且冪等只保護成功結果 / pending 後 5xx 不寫 paid 冪等且同 key 可安全重試 | 整合測試經 plan 核准 fault seam |
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 付款失敗後顧客可以安全重試 | 顧客重送已成功的同一付款請求 | `FR-012`; `FR-015`; `BR-004`; `SC-006` | 只有 paid 成功寫入冪等 mapping，重送不二次執行 | assigned | backend | 訂單 | `../../truth/features/backend/訂單/付款與取消.feature` | 付款失敗可重試且冪等只保護成功結果 / 已成功付款請求以相同冪等鍵重送 | 驗證 paid mapping 及結果一致 |
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 顧客只能在訂單尚未接單時取消 | 顧客取消尚未接單且未付款的訂單 | `FR-007`; `FR-009`; `FR-011`; `FR-013`; `FR-015`; `BR-003`; `SC-003` | created/unpaid 可取消，保留訂單快照並阻擋後續操作 | assigned | frontend | 顧客訂單 | `../../truth/features/frontend/顧客訂單/付款與取消.feature` | 顧客僅能在允許的狀態取消訂單 / 顧客取消尚未付款且未接單的訂單 | UI 顯示 cancelled，保留明細 |
 | `features/acceptance/付款取消與狀態查詢總驗收旅程.feature` | 顧客只能在訂單尚未接單時取消 | 顧客取消尚未接單且未付款的訂單 | `FR-007`; `FR-009`; `FR-011`; `FR-013`; `FR-015`; `BR-003`; `SC-003` | backend 交易取消 order 且後續 pay/merchant action 拒絕 | assigned | backend | 訂單 | `../../truth/features/backend/訂單/付款與取消.feature` | 顧客取消與付款狀態在同一權威訂單上協調 / created unpaid 訂單取消後禁止付款及出餐 | 驗證狀態與快照不變 |
@@ -110,14 +113,14 @@
 
 ## Coverage Summary
 
-- Acceptance Examples: 18
+- Acceptance Examples: 19
 - In-scope spec requirement IDs: 24
 - Requirements mapped to acceptance Examples: 24
 - Unmapped spec requirements: 0
-- Assigned assertions: 18
+- Assigned assertions: 19
 - Unmapped assertions: 0
 - Blocked assertions: 0
-- Derived interface Examples: 39
+- Derived interface Examples: 40
 
 ## Open Decisions
 

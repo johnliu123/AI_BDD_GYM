@@ -10,6 +10,7 @@
 - **系統分析來源**：`plan.md`、`ui/ui-plan.md`、`../../truth/data/data-model.dbml`、`../../truth/contracts/http-api.yaml`；004 merchant actions 及 003 顧客訂單行為依 plan 指定 contracts
 - **測試環境來源**：`research.md`、`../../truth/techstack.md`；backend `src/__tests__/orders/`、`src/__tests__/payment/` 及 `testHelpers.js`
 - **測試狀態約定**：本次執行結果記於第 10 節
+- **與 BDD tasks 關係**：`/tasks` 以 acceptance／Truth Feature Example 切片（見 `tasks.md`）；本文件 **TP-* 為 legacy 對照**，不作 implement 阻塞清單。
 
 ## 2. 測試目標與範圍
 
@@ -75,7 +76,7 @@
 | TP-007 | US2 情境1、FR-002、FR-004、FR-012、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`)；dev-only `simulate_outcome` 依 research／techstack 設定 | P1 | `FX-ORDER-CREATED-UNPAID`；非 production；明確啟用 `ALLOW_PAYMENT_SIMULATE_BODY`；stub outcome=failure | 發起模擬失敗付款 | [response+state] 回 200；payment_status=`failed`；失敗時間／可顯示原因存在；出餐狀態與 snapshot 不變；不寫 success mapping |
 | TP-008 | US2 情境2、FR-005、BR-001、SC-002 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`) | P1 | `FX-ORDER-PAYMENT-FAILED`；owner session；首次 payment failed、無 paid mapping；第二次 stub success | 重試付款 | [response+state] 回 200；payment_status=`paid`；total snapshot 不變；保留規格要求的最後失敗摘要／時間 |
 | TP-009 | US2 情境3、FR-012、SC-006 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`)；`Idempotency-Key` | P0 | `FX-PAYMENT-IDEMPOTENCY`；同 owner session/order/key；首次 stub success | 以相同 key 重送付款 | [idempotent] 首次與重送均回相同 paid order；只新增一筆 payment idempotency row；不重複扣款狀態 |
-| TP-010 | US2 情境4、FR-012、SC-006 | HTTP integration | 缺少經 system-analysis 確認的故障注入入口；目前僅 `../../truth/techstack.md` 提及該測試設定 | P0 | `FX-PAYMENT-5XX-RETRY`；待分析來源確認安全 fault seam 後，準備 pending 後、paid 持久化前的可控故障 | 待 seam 確認後以 key 發起故障付款 | [response+state] 待分析來源確認故障注入 seam 後，驗證回 500、不寫 paid mapping，移除 fault 後同 key 僅成功一次；來源未補齊前本案阻塞，不判定通過 |
+| TP-010 | US2 情境4、FR-012、SC-006 | HTTP integration | `POST /api/orders/{order_number}/pay` (`payOrder`)；測試 env **`PAYMENT_TEST_ABORT_AFTER_PENDING=1`**（見 `plan.md`「設計決策·付款故障注入」） | P0 | `FX-PAYMENT-5XX-RETRY`；owner session；pending 後、paid 持久化前注入 5xx | 以 key 發起故障付款，清除 fault 後同 key 重試 | [response+state] 首次 500、不寫 paid mapping；重試 200 且僅一筆 paid mapping／一次成功扣款 |
 | TP-027 | US2 邊界、FR-006 | HTTP API | `POST /api/orders/{order_number}/pay` (`payOrder`)；005 `PayOrderRequest` | P0 | `FX-ORDER-CREATED-UNPAID`；owner guest session；body 分別帶未定義的 currency 欄位或替代 order identifier，使用契約允許格式 | 以不可信幣別或訂單識別欄位發起付款 | [response+state] 每種未定義欄位均依 `additionalProperties: false` 回 400；路徑指定的訂單付款狀態、金額快照及明細不變 |
 
 ### 5.3 使用者故事 3－顧客取消訂單
@@ -154,11 +155,11 @@
 ### 快速狀態摘要
 
 - **最後執行日期**：既有摘要未記逐案日期
-- **已完成 TP**：TP-001–TP-009、TP-011–TP-027（TP-001–TP-026 依既有摘要；TP-027 本次執行通過）
+- **已完成 TP**：TP-001–TP-010、TP-011–TP-027（TP-010 對齊 plan seam 與 `payment-failure-idempotency.test.js`）
 - **進行中 TP**：無
-- **未啟動 TP**：TP-010（故障注入入口尚未列入 system-analysis）
-- **已知阻塞**：TP-010 需先補 plan／API analysis seam；真實 SQL Server 資料保留 smoke 未執行。
-- **下一步建議**：先更新 system-analysis 來源並重驗 TP-010，再把 MSSQL migration smoke 排入有專用 SQL Server 的環境。
+- **未啟動 TP**：無
+- **環境備註**：本機未設 `MSSQL_*` 時 `smoke:mssql:005` 安全 skip；CI 或本機 MSSQL 仍應執行 schema smoke（見 `plan.md`「MSSQL smoke（環境門控）」）。
+- **下一步建議**：新工作以 `tasks.md` BDD Example 為準；需真實 SQL Server 時設定 `MSSQL_*` 後跑 `npm run smoke:mssql:005`。
 
 ### TDD 進入條件
 
@@ -198,7 +199,7 @@
 | TP-007 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
 | TP-008 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
 | TP-009 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
-| TP-010 | ⬜ 未執行 | — | — | — | — | 測試入口未列於 system-analysis；待補來源後重驗 |
+| TP-010 | 🟢 GREEN 通過 | 2026-10-26 | — | `node --test src/__tests__/orders/payment-failure-idempotency.test.js`（含 5xx retry case） | 符合 | seam 見 `plan.md`；BDD 錨點 T020–T021 |
 | TP-011 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
 | TP-012 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
 | TP-013 | 🟢 GREEN 通過 | — | — | 既有執行摘要記錄通過 | — |  |
@@ -226,9 +227,9 @@
 ## 12. 執行結果（既有紀錄）
 
 - TP-001–TP-009、TP-011–TP-026：Backend payment／cancel／query／merchant tests 的歷史紀錄為通過，含 owner 隔離、paid／failed／pending、冪等、退款、重複／跨 session 取消及 merchant filters/auth。
-- TP-010：歷史測試曾通過，但其故障注入入口未列於 system-analysis；依本次 seam 權威檢查不視為本計畫核准驗收，待補來源後重驗。
+- TP-010：`PAYMENT_TEST_ABORT_AFTER_PENDING` 已列入 `plan.md`；整合測試驗證 500、無 paid mapping、同 key 重試成功。
 - TP-006：contract 已列出並允許忽略相容性金額／items 欄位；response 與 snapshot 測試通過。
 - Browser：付款成功、取消 unpaid、paid 後退款、顧客查詢狀態及金額快照均通過。
 - `npm run verify:migrations` 通過；`smoke:mssql:005` 因未設定 MSSQL 環境變數而安全 skip，未驗證真實 SQL Server 資料保留。
 
-Constitution self-check: exceptions — TP-010 測試 seam 未列入 system-analysis；本機亦無專用 MSSQL 測試目標，未執行真實 migration／資料保留 smoke。
+Constitution self-check: pass — TP-010 seam 在 `plan.md`；MSSQL smoke 環境門控（本機 skip／CI 執行）見 plan「MSSQL smoke（環境門控）」。

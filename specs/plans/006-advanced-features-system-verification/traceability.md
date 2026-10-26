@@ -91,7 +91,7 @@
 | Unmapped to acceptance | None |
 | Blocked assertion | None |
 
-All in-scope requirement IDs map to acceptance Examples. **FR-001** 分類刪除政策已於 `spec.md` 澄清（拒絕刪除、回傳 `CATEGORY_IN_USE`、不自動移轉／cascade）；對應 acceptance Example「店家刪除仍有餐點使用的分類」、`backend/菜單/店家維護菜單.feature` 與 **TP-006**／tasks T013–T014。
+All in-scope requirement IDs map to acceptance Examples. **FR-001** 分類刪除政策已於 `spec.md` 澄清（拒絕刪除、回傳 `CATEGORY_IN_USE`、不自動移轉／cascade）；對應 acceptance Example「店家刪除仍有餐點使用的分類」、`backend/菜單/店家維護菜單.feature#店家刪除仍被餐點使用的分類遭拒` 與 tasks **T013–T014**（BDD 錨點；legacy `testplan.md` TP-006 僅作歷史對照）。
 
 ## Coverage Summary
 

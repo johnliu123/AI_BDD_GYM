@@ -32,7 +32,7 @@ disable-model-invocation: true
 ## Phase 4 -- 驗收追溯與可落地性
 
 1. READ 重新讀取 spec、acceptance Feature、所有衍生 Feature、DSL 與 coverage matrix，確認每個衍生案例均有 acceptance 來源、每項上游驗收面向均有去向或明確例外，且每個範圍內可驗收 spec requirement ID 均有對應 acceptance／interface Scenario 或明確阻塞狀態。
-2. DELEGATE 對每個含介面 Feature 的目錄分別執行 `uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root FEATURE_DIR/features/<介面>`；不可把同時含 acceptance 與介面子目錄的 `FEATURE_DIR/features` 當作 root。保留各介面的拓樸、DSL row 重複及 step 唯一匹配結果。
+2. DELEGATE 對 **介面根** 執行 `uv run .agent/skills/gherkin-and-dsl/scripts/audit_feature_dsl_topology.py --root specs/truth/features/<介面>`（例如 `backend`、`frontend`；其下為 `<功能模組>/*.feature`）。**勿** 以功能模組子目錄（如 `backend/菜單`）為 root，否則誤報「介面根禁止直接放置 feature」。不可把 plan 內 `features/acceptance` 與 Truth 介面混在同一 root。保留拓樸、DSL row 重複及 step 唯一匹配結果。
 3. THINK 依機械結果與已載入標準檢查 Rule 是否原子、每個 Example 是否剛好一個 When、Then 是否充分驗證該 Rule、介面邊界是否遵循 system-analysis，以及 DSL 是否足以直接實作；機械稽核不能替代語意檢查。
 4. EXEC Apply Truth 後 DELEGATE **`/truth-delta`**（`owner_skill_id: dsl-refine`，本輪完整 `entries[]`）。
 5. WRITE 依 Phase 1 已載入的 `scenario-index` 骨架產出 **`PLAN_DIR/scenario-index.md`**（業務情境索引；人 Review 主入口），並修正目標範圍內的覆蓋、拓樸或 DSL 缺口，重跑受影響的稽核。
